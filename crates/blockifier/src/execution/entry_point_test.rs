@@ -1,14 +1,15 @@
-use std::collections::HashSet;
+use alloc::string::ToString;
 
 use num_bigint::BigInt;
 use pretty_assertions::assert_eq;
-use starknet_api::core::{EntryPointSelector, PatriciaKey};
+use starknet_api::api_core::{EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use starknet_api::{calldata, patricia_key, stark_felt};
 
 use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
+use crate::collections::HashSet;
 use crate::execution::entry_point::{CallEntryPoint, CallExecution, CallInfo, Retdata};
 use crate::execution::errors::EntryPointExecutionError;
 use crate::retdata;

@@ -1,7 +1,10 @@
+use alloc::string::String;
+use alloc::vec::Vec;
+
 use cairo_felt::Felt252;
 use itertools::concat;
+use starknet_api::api_core::{ContractAddress, EntryPointSelector};
 use starknet_api::calldata;
-use starknet_api::core::{ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{

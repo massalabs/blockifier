@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use starknet_api::core::{
+use starknet_api::api_core::{
     calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
 };
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -13,6 +11,7 @@ use starknet_api::{calldata, patricia_key, stark_felt};
 
 use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use crate::block_context::BlockContext;
+use crate::collections::HashMap;
 use crate::execution::contract_class::ContractClassV0;
 use crate::state::cached_state::CachedState;
 use crate::state::state_api::{State, StateReader};

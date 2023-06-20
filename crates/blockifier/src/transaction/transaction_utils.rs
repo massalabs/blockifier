@@ -1,8 +1,9 @@
-use std::collections::HashMap;
+use alloc::string::{String, ToString};
 
 use cairo_felt::Felt252;
 
 use crate::abi::constants;
+use crate::collections::HashMap;
 use crate::execution::entry_point::{CallInfo, ExecutionResources};
 use crate::execution::execution_utils::stark_felt_to_felt;
 use crate::fee::gas_usage::calculate_tx_gas_usage;

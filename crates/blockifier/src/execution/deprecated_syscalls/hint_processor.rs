@@ -13,14 +13,15 @@ use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::hint_errors::HintError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use cairo_vm::vm::runners::cairo_runner::RunResources;
 use cairo_vm::vm::vm_core::VirtualMachine;
-use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector};
+use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use starknet_api::StarknetApiError;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 use crate::abi::constants;
 use crate::execution::common_hints::{extended_builtin_hint_processor, HintExecutionResult};
@@ -328,13 +329,20 @@ impl HintProcessor for DeprecatedSyscallHintProcessor<'_> {
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
+        run_resources: &mut RunResources,
     ) -> HintExecutionResult {
         let hint = hint_data.downcast_ref::<HintProcessorData>().ok_or(HintError::WrongHintData)?;
         if hint_code::SYSCALL_HINTS.contains(hint.code.as_str()) {
             return self.execute_next_syscall(vm, &hint.ids_data, &hint.ap_tracking);
         }
 
-        self.builtin_hint_processor.execute_hint(vm, exec_scopes, hint_data, constants)
+        self.builtin_hint_processor.execute_hint(
+            vm,
+            exec_scopes,
+            hint_data,
+            constants,
+            run_resources,
+        )
     }
 }
 
