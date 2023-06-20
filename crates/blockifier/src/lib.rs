@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
-extern crate alloc;
-
 pub mod abi;
 pub mod block_context;
 pub mod execution;
@@ -14,10 +11,15 @@ pub mod utils;
 #[cfg(test)]
 pub mod test_utils;
 
-mod collections {
-    #[cfg(feature = "std")]
-    pub use std::collections::{HashMap, HashSet};
+#[cfg(feature = "std")]
+include!("./with_std.rs");
 
+#[cfg(not(feature = "std"))]
+include!("./without_std.rs");
+
+pub mod stdlib {
+    #[cfg(feature = "std")]
+    pub use crate::with_std::*;
     #[cfg(not(feature = "std"))]
-    pub use hashbrown::{HashMap, HashSet};
+    pub use crate::without_std::*;
 }

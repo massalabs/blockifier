@@ -1,10 +1,8 @@
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-
 use cairo_felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, RunResources,
 };
+use libm::floor;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
@@ -14,11 +12,13 @@ use starknet_api::transaction::{Calldata, EthAddress, EventContent, Fee, L2ToL1P
 use crate::abi::abi_utils::selector_from_name;
 use crate::abi::constants;
 use crate::block_context::BlockContext;
-use crate::collections::HashSet;
 use crate::execution::deprecated_syscalls::hint_processor::SyscallCounter;
 use crate::execution::errors::{EntryPointExecutionError, PreExecutionError};
 use crate::execution::execution_utils::execute_entry_point_call;
 use crate::state::state_api::State;
+use crate::stdlib::collections::HashSet;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::{AccountTransactionContext, TransactionExecutionResult};
 
@@ -110,7 +110,7 @@ impl EntryPointExecutionContext {
                     panic!("{} must appear in `vm_resource_fee_cost`.", constants::N_STEPS_RESOURCE)
                 });
             let max_gas = self.account_tx_context.max_fee.0 / self.block_context.gas_price;
-            ((max_gas as f64 / gas_per_step).floor() as usize).min(constants::MAX_STEPS_PER_TX)
+            (floor(max_gas as f64 / gas_per_step) as usize).min(constants::MAX_STEPS_PER_TX)
         }
     }
 

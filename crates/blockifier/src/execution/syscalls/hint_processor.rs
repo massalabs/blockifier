@@ -1,6 +1,3 @@
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
-
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::{Hint, StarknetHint};
 use cairo_lang_casm::operand::{BinOpOperand, DerefOrImmediate, Operation, Register, ResOperand};
@@ -42,6 +39,12 @@ use crate::execution::syscalls::{
 };
 use crate::state::errors::StateError;
 use crate::state::state_api::State;
+use crate::stdlib::any::Any;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::fmt::Debug;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 pub type SyscallCounter = HashMap<SyscallSelector, usize>;
 
@@ -241,8 +244,8 @@ impl<'a> SyscallHintProcessor<'a> {
         base_gas_cost: u64,
     ) -> HintExecutionResult
     where
-        Request: SyscallRequest + std::fmt::Debug,
-        Response: SyscallResponse + std::fmt::Debug,
+        Request: SyscallRequest + Debug,
+        Response: SyscallResponse + Debug,
         ExecuteCallback: FnOnce(
             Request,
             &mut VirtualMachine,

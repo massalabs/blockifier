@@ -1,6 +1,3 @@
-use alloc::string::String;
-use alloc::vec::Vec;
-
 use cairo_felt::Felt252;
 use itertools::concat;
 use starknet_api::api_core::{ContractAddress, EntryPointSelector};
@@ -20,6 +17,8 @@ use crate::execution::entry_point::{
 use crate::fee::fee_utils::calculate_tx_fee;
 use crate::state::cached_state::{CachedState, MutRefState, TransactionalState};
 use crate::state::state_api::{State, StateReader};
+use crate::stdlib::string::String;
+use crate::stdlib::vec::Vec;
 use crate::transaction::constants;
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::{

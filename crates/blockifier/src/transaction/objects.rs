@@ -1,12 +1,12 @@
-use alloc::string::String;
-
 use itertools::concat;
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{Fee, TransactionHash, TransactionSignature, TransactionVersion};
 
-use crate::collections::{HashMap, HashSet};
 use crate::execution::entry_point::CallInfo;
+use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::string::String;
+use crate::stdlib::vec::Vec;
 use crate::transaction::errors::TransactionExecutionError;
 
 pub type TransactionExecutionResult<T> = Result<T, TransactionExecutionError>;

@@ -11,10 +11,10 @@ use starknet_api::{calldata, patricia_key, stark_felt};
 
 use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use crate::block_context::BlockContext;
-use crate::collections::HashMap;
 use crate::execution::contract_class::ContractClassV0;
 use crate::state::cached_state::CachedState;
 use crate::state::state_api::{State, StateReader};
+use crate::stdlib::collections::HashMap;
 use crate::test_utils::{
     declare_tx, deploy_account_tx, invoke_tx, DictStateReader, ACCOUNT_CONTRACT_PATH, BALANCE,
     ERC20_CONTRACT_PATH, MAX_FEE, TEST_ACCOUNT_CONTRACT_CLASS_HASH, TEST_CLASS_HASH,

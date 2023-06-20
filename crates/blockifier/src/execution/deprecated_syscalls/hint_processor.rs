@@ -1,6 +1,3 @@
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
-
 use cairo_felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -44,6 +41,11 @@ use crate::execution::execution_utils::{
 use crate::execution::hint_code;
 use crate::state::errors::StateError;
 use crate::state::state_api::State;
+use crate::stdlib::any::Any;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 pub type SyscallCounter = HashMap<DeprecatedSyscallSelector, usize>;
 

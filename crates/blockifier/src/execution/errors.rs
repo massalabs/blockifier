@@ -1,6 +1,3 @@
-use alloc::boxed::Box;
-use alloc::string::{String, ToString};
-
 use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
@@ -14,6 +11,9 @@ use thiserror_no_std::Error;
 
 use crate::execution::execution_utils::felts_as_str;
 use crate::state::errors::StateError;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 // TODO(AlonH, 21/12/2022): Implement Display for all types that appear in errors.
 

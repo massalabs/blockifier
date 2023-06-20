@@ -1,8 +1,3 @@
-use alloc::string::ToString;
-use alloc::vec::Vec;
-use std::ops::Deref;
-use std::sync::Arc;
-
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
@@ -23,9 +18,13 @@ use starknet_api::deprecated_contract_class::{
 };
 
 use crate::abi::constants;
-use crate::collections::HashMap;
 use crate::execution::errors::PreExecutionError;
 use crate::execution::execution_utils::{felt_to_stark_felt, sn_api_to_cairo_vm_program};
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::ops::Deref;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::sync::Arc;
+use crate::stdlib::vec::Vec;
 
 /// Represents a runnable StarkNet contract class (meaning, the program is runnable by the VM).
 /// We wrap the actual class in an Arc to avoid cloning the program when cloning the class.

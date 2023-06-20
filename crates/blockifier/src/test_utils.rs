@@ -1,5 +1,4 @@
 #![cfg(test)]
-use alloc::string::{String, ToString};
 use core::str::from_utf8;
 
 use cairo_vm::vm::runners::builtin_runner::{
@@ -25,7 +24,6 @@ use starknet_api::{calldata, patricia_key, stark_felt};
 use crate::abi::abi_utils::get_storage_var_address;
 use crate::abi::constants;
 use crate::block_context::BlockContext;
-use crate::collections::HashMap;
 use crate::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use crate::execution::entry_point::{
     CallEntryPoint, CallExecution, CallInfo, CallType, EntryPointExecutionContext,
@@ -34,6 +32,8 @@ use crate::execution::entry_point::{
 use crate::state::cached_state::{CachedState, ContractClassMapping, ContractStorageKey};
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::{String, ToString};
 use crate::transaction::objects::AccountTransactionContext;
 
 // Addresses.

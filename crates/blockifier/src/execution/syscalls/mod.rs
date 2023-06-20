@@ -27,6 +27,7 @@ use crate::execution::execution_utils::{
     execute_deployment, felt_from_ptr, stark_felt_from_ptr, stark_felt_to_felt, write_felt,
     write_maybe_relocatable, write_stark_felt, ReadOnlySegment,
 };
+use crate::stdlib::vec::Vec;
 
 pub mod hint_processor;
 
