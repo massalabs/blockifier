@@ -7,6 +7,7 @@ use starknet_api::{class_hash, contract_address, patricia_key, stark_felt};
 use super::*;
 use crate::block_context::BlockContext;
 use crate::collections::HashMap;
+use crate::stdlib::collections::HashMap;
 use crate::test_utils::{
     deprecated_create_test_state, get_test_contract_class, DictStateReader, TEST_CLASS_HASH,
     TEST_EMPTY_CONTRACT_CLASS_HASH,

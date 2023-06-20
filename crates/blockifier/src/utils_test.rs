@@ -1,6 +1,6 @@
 use pretty_assertions::assert_eq;
 
-use crate::collections::HashMap;
+use crate::stdlib::collections::HashMap;
 use crate::utils::subtract_mappings;
 
 #[test]

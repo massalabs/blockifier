@@ -1,4 +1,4 @@
-use crate::collections::HashMap;
+use crate::stdlib::collections::HashMap;
 
 #[cfg(test)]
 #[path = "utils_test.rs"]

@@ -23,6 +23,8 @@ use crate::execution::execution_utils::{
     read_execution_retdata, stark_felt_to_felt, Args, ReadOnlySegments,
 };
 use crate::state::state_api::State;
+use crate::stdlib::string::ToString;
+use crate::stdlib::vec::Vec;
 
 pub struct VmExecutionContext<'a> {
     pub runner: CairoRunner,

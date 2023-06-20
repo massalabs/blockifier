@@ -1,6 +1,3 @@
-use alloc::string::String;
-use alloc::sync::Arc;
-
 use cairo_felt::Felt252;
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::deprecated_contract_class::EntryPointType;
@@ -19,6 +16,8 @@ use crate::execution::execution_utils::execute_deployment;
 use crate::state::cached_state::{CachedState, TransactionalState};
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader};
+use crate::stdlib::string::String;
+use crate::stdlib::sync::Arc;
 use crate::transaction::constants;
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::{TransactionExecutionInfo, TransactionExecutionResult};

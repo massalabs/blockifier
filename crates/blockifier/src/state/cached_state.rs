@@ -11,10 +11,10 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 
 use crate::abi::abi_utils::get_erc20_balance_var_addresses;
-use crate::collections::{HashMap, HashSet};
 use crate::execution::contract_class::ContractClass;
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::collections::{HashMap, HashSet};
 use crate::sync::{Arc, Mutex, MutexGuard};
 use crate::utils::subtract_mappings;
 

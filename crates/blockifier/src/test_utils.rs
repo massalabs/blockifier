@@ -1,5 +1,4 @@
 #![cfg(test)]
-use alloc::string::{String, ToString};
 use core::str::from_utf8;
 
 use cairo_felt::Felt252;
@@ -12,7 +11,7 @@ use starknet_api::api_core::{
     calculate_contract_address, ChainId, ClassHash, CompiledClassHash, ContractAddress,
     EntryPointSelector, Nonce, PatriciaKey,
 };
-use starknet_api::block::{BlockNumber, BlockNumber, BlockTimestamp, BlockTimestamp};
+use starknet_api::block::{BlockNumber, BlockTimestamp, BlockTimestamp};
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass, EntryPointType,
 };
@@ -27,7 +26,6 @@ use starknet_api::{calldata, class_hash, contract_address, patricia_key, stark_f
 use crate::abi::abi_utils::get_storage_var_address;
 use crate::abi::constants;
 use crate::block_context::BlockContext;
-use crate::collections::HashMap;
 use crate::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use crate::execution::entry_point::{
     CallEntryPoint, CallExecution, CallInfo, CallType, EntryPointExecutionContext,
@@ -37,6 +35,8 @@ use crate::execution::execution_utils::felt_to_stark_felt;
 use crate::state::cached_state::{CachedState, ContractClassMapping, ContractStorageKey};
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::{String, ToString};
 use crate::sync::Arc;
 use crate::transaction::objects::AccountTransactionContext;
 use crate::transaction::transactions::DeployAccountTransaction;

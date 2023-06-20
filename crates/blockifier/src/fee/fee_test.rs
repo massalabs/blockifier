@@ -1,5 +1,3 @@
-use alloc::string::String;
-
 use assert_matches::assert_matches;
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
@@ -8,8 +6,9 @@ use cairo_vm::vm::runners::builtin_runner::{
 
 use crate::abi::constants;
 use crate::block_context::BlockContext;
-use crate::collections::HashMap;
 use crate::fee::fee_utils::calculate_l1_gas_by_vm_usage;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::String;
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::ResourcesMapping;
 

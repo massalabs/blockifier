@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, ResourceTracker, RunResources,
 };
+use libm::floor;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector, EthAddress};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
@@ -14,11 +15,13 @@ use crate::abi::abi_utils::selector_from_name;
 use crate::abi::constants;
 use crate::block_context::BlockContext;
 use crate::cmp::min;
-use crate::collections::HashSet;
 use crate::execution::deprecated_syscalls::hint_processor::SyscallCounter;
 use crate::execution::errors::{EntryPointExecutionError, PreExecutionError};
 use crate::execution::execution_utils::execute_entry_point_call;
 use crate::state::state_api::State;
+use crate::stdlib::collections::HashSet;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::{AccountTransactionContext, TransactionExecutionResult};
 

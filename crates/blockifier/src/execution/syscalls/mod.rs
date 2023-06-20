@@ -29,6 +29,7 @@ use crate::execution::execution_utils::{
     write_felt, write_maybe_relocatable, write_stark_felt, ReadOnlySegment,
 };
 use crate::execution::syscalls::hint_processor::{INVALID_INPUT_LENGTH_ERROR, OUT_OF_GAS_ERROR};
+use crate::stdlib::vec::Vec;
 use crate::transaction::transaction_utils::update_remaining_gas;
 
 pub mod hint_processor;

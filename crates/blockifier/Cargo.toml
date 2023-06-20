@@ -24,8 +24,8 @@ testing = []
 ark-ff.workspace = true
 ark-secp256k1.workspace = true
 cached.workspace = true
-cairo-felt = { workspace = true }
-cairo-vm = { workspace = true }
+cairo-felt = { workspace = true, features = ["alloc"] }
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-casm-contract-class = { workspace = true }
 cairo-lang-utils = { workspace = true }
@@ -50,6 +50,7 @@ lazy_static = { workspace = true }
 thiserror-no-std = { workspace = true }
 starknet-crypto = { workspace = true }
 spin = { workspace = true }
+libm = { workspace = true }
 
 
 [dev-dependencies]

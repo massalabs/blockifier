@@ -1,9 +1,8 @@
-use alloc::string::String;
-
 use starknet_api::api_core::{ChainId, ContractAddress};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 
-use crate::collections::HashMap;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::String;
 use crate::sync::Arc;
 
 #[derive(Clone, Debug)]
