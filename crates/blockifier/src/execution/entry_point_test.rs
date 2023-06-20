@@ -1,5 +1,3 @@
-use alloc::string::ToString;
-
 use num_bigint::BigInt;
 use pretty_assertions::assert_eq;
 use starknet_api::api_core::{EntryPointSelector, PatriciaKey};
@@ -9,11 +7,12 @@ use starknet_api::transaction::Calldata;
 use starknet_api::{calldata, patricia_key, stark_felt};
 
 use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
-use crate::collections::HashSet;
 use crate::execution::entry_point::{CallEntryPoint, CallExecution, CallInfo, Retdata};
 use crate::execution::errors::EntryPointExecutionError;
 use crate::retdata;
 use crate::state::cached_state::CachedState;
+use crate::stdlib::collections::HashSet;
+use crate::stdlib::string::ToString;
 use crate::test_utils::{
     create_test_state, deprecated_create_test_state, pad_address_to_64,
     trivial_external_entry_point, trivial_external_entry_point_security_test, DictStateReader,

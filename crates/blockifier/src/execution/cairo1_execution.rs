@@ -22,6 +22,8 @@ use crate::execution::execution_utils::{
 };
 use crate::execution::syscalls::hint_processor::SyscallHintProcessor;
 use crate::state::state_api::State;
+use crate::stdlib::string::ToString;
+use crate::stdlib::vec::Vec;
 
 // TODO(spapini): Try to refactor this file into a StarknetRunner struct.
 

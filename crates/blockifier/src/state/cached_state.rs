@@ -9,10 +9,10 @@ use starknet_api::api_core::{ClassHash, CompiledClassHash, ContractAddress, Nonc
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 
-use crate::collections::{HashMap, HashSet};
 use crate::execution::contract_class::ContractClass;
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::collections::{HashMap, HashSet};
 use crate::utils::subtract_mappings;
 
 #[cfg(test)]

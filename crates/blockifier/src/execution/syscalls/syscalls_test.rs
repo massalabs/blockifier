@@ -1,3 +1,4 @@
+#![cfg(feature = "test")]
 use std::collections::{HashMap, HashSet};
 
 use assert_matches::assert_matches;

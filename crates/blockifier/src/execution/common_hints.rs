@@ -1,6 +1,3 @@
-use alloc::boxed::Box;
-use alloc::rc::Rc;
-use alloc::string::{String, ToString};
 use core::ops::Shl;
 
 use cairo_felt::{Felt252, PRIME_STR};
@@ -19,10 +16,13 @@ use cairo_vm::vm::vm_core::VirtualMachine;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 
-use crate::collections::HashMap;
 use crate::execution::hint_code::{
     NORMALIZE_ADDRESS_SET_IS_250_HINT, NORMALIZE_ADDRESS_SET_IS_SMALL_HINT,
 };
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::rc::Rc;
+use crate::stdlib::string::{String, ToString};
 
 pub type HintExecutionResult = Result<(), HintError>;
 
