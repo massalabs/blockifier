@@ -118,7 +118,7 @@ pub fn sn_api_to_cairo_vm_program(program: DeprecatedProgram) -> Result<Program,
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
     let builtins = serde_json::from_value(program.builtins)?;
     let data = deserialize_array_of_bigint_hex(program.data)?;
-    let hints = serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?;
+    let hints = serde_json::from_value::<HashMap<u64, Vec<HintParams>>>(program.hints)?;
     let main = None;
     let error_message_attributes = match program.attributes {
         serde_json::Value::Null => vec![],

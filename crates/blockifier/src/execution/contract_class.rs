@@ -2,7 +2,7 @@ use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::serde::deserialize_program::{
-    ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
+    ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceIds, ReferenceManager,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
 use cairo_vm::types::program::Program;
@@ -217,10 +217,10 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
             .into_iter()
             .map(|x| MaybeRelocatable::from(Felt252::from(x.value)))
             .collect();
-        let hints: HashMap<usize, Vec<HintParams>> = class
+        let hints: HashMap<u64, Vec<HintParams>> = class
             .hints
             .iter()
-            .map(|(i, hints)| (*i, hints.iter().map(hint_to_hint_params).collect()))
+            .map(|(i, hints)| (*i as u64, hints.iter().map(hint_to_hint_params).collect()))
             .collect();
 
         // Collect a sting to hint map so that the hint processor can fetch the correct [Hint]
@@ -302,7 +302,7 @@ fn hint_to_hint_params(hint: &cairo_lang_casm::hints::Hint) -> HintParams {
         accessible_scopes: vec![],
         flow_tracking_data: FlowTrackingData {
             ap_tracking: ApTracking::new(),
-            reference_ids: HashMap::new(),
+            reference_ids: ReferenceIds::new(),
         },
     }
 }
