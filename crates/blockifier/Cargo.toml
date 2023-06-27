@@ -18,7 +18,7 @@ testing = []
 
 [dependencies]
 cairo-felt = { workspace = true, features = ["alloc"] }
-cairo-vm = { workspace = true, features = ["cairo-1-hints", "scale-codec"] }
+cairo-vm = { workspace = true, features = ["cairo-1-hints", "parity-scale-codec"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-casm-contract-class = { workspace = true }
 cairo-lang-utils = { workspace = true }
@@ -29,6 +29,9 @@ itertools = { workspace = true }
 num-bigint = { workspace = true }
 num-integer = { workspace = true }
 num-traits = { workspace = true }
+parity-scale-codec = { workspace = true, optional = true, features = [
+    "derive",
+] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["arbitrary_precision"] }
 sha3 = { workspace = true }
@@ -42,7 +45,6 @@ lazy_static = { workspace = true }
 thiserror-no-std = { workspace = true }
 starknet-crypto = { workspace = true }
 libm = { workspace = true }
-parity-scale-codec = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 starknet_api = { workspace = true, features = ["testing"] }
