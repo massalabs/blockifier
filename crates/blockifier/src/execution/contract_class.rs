@@ -9,6 +9,7 @@ use cairo_vm::types::program::Program;
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_NAME};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
+use parity_scale_codec::{Decode, Encode};
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer};
 use starknet_api::api_core::EntryPointSelector;
@@ -54,7 +55,7 @@ impl ContractClass {
 }
 
 // V0.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Encode, Decode)]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
     type Target = ContractClassV0Inner;
@@ -110,6 +111,28 @@ pub struct ContractClassV0Inner {
     #[serde(deserialize_with = "deserialize_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
+}
+
+impl Encode for ContractClassV0Inner {
+    fn encode(&self) -> Vec<u8> {
+        let val = self.clone();
+        let entry_points_by_type = val
+            .entry_points_by_type
+            .into_iter()
+            .collect::<Vec<(EntryPointType, Vec<EntryPoint>)>>();
+        (val.program, entry_points_by_type).encode()
+    }
+}
+
+impl Decode for ContractClassV0Inner {
+    fn decode<I: parity_scale_codec::Input>(
+        input: &mut I,
+    ) -> Result<Self, parity_scale_codec::Error> {
+        let res = <(Program, Vec<(EntryPointType, Vec<EntryPoint>)>)>::decode(input)?;
+        let entry_points_by_type =
+            <HashMap<EntryPointType, Vec<EntryPoint>>>::from_iter(res.1.into_iter());
+        Ok(ContractClassV0Inner { program: res.0, entry_points_by_type })
+    }
 }
 
 impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
@@ -321,4 +344,18 @@ fn convert_entry_points_v1(
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod test {
+    use parity_scale_codec::{Decode, Encode};
+
+    use crate::execution::contract_class::ContractClassV0;
+    use crate::test_utils::TEST_CONTRACT_PATH;
+
+    #[test]
+    fn test_encode_decode_contract_v0() {
+        let contract = ContractClassV0::from_file(TEST_CONTRACT_PATH);
+        assert_eq!(contract, ContractClassV0::decode(&mut &contract.encode()[..]).unwrap())
+    }
 }
