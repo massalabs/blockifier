@@ -38,6 +38,7 @@ num-traits = { version = "0.2", default-features = false }
 rstest = { version = "0.17.0", default-features = false }
 ouroboros = { version = "0.15.6", default-features = false }
 papyrus_storage = { version = "0.0.4", default-features = false }
+parity-scale-codec = { version = "3.6.0", default-features = false }
 phf = { version = "0.11", features = ["macros"], default-features = false }
 pretty_assertions = { version = "1.2.1", default-features = false, features = [
     "alloc",
@@ -59,4 +60,3 @@ lazy_static = { version = "1.4.0", default-features = false, features = [
 starknet-crypto = { version = "0.5.1", default-features = false }
 spin = { version = "0.9.8", default-features = false }
 libm = { version = "0.2.7", default-features = false }
-parity-scale-codec = { version = "3.5.0", default-features = false }
