@@ -1086,7 +1086,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/keep-starknet-strange/starknet-api?branch=no_std-support#68d693f84211880347b815ed84f23a8ea901d30d"
+source = "git+https://github.com/keep-starknet-strange/starknet-api?branch=no_std-support#6a48e7c8636685b80515c6ab666c1ae9d01278a2"
 dependencies = [
  "cairo-lang-casm-contract-class",
  "derive_more",

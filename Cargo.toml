@@ -22,6 +22,7 @@ num-bigint = { version = "0.4", default-features = false }
 num-integer = { version = "0.1.45", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 ouroboros = { version = "0.15.6", default-features = false }
+parity-scale-codec = { version = "3.6.0", no-default-features = true }
 phf = { version = "0.11", features = ["macros"], default-features = false }
 pretty_assertions = { version = "1.2.1", default-features = false, features = [
     "alloc",
@@ -42,4 +43,3 @@ lazy_static = { version = "1.4.0", default-features = false, features = [
 ] }
 starknet-crypto = { version = "0.5.1", default-features = false }
 libm = { version = "0.2.7", default-features = false }
-parity-scale-codec = { version = "3.5.0", default-features = false }
