@@ -10,7 +10,7 @@ use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_NAME};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 #[cfg(feature = "parity-scale-codec")]
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer, Serialize};
 use starknet_api::api_core::EntryPointSelector;
@@ -52,6 +52,19 @@ impl ContractClass {
             ContractClass::V0(class) => class.estimate_casm_hash_computation_resources(),
             ContractClass::V1(class) => class.estimate_casm_hash_computation_resources(),
         }
+    }
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl ContractClass {
+    // This is the maximum size of a contract in starknet. https://docs.starknet.io/documentation/starknet_versions/limits_and_triggers/
+    const MAX_CONTRACT_BYTE_SIZE: usize = 20971520;
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl MaxEncodedLen for ContractClass {
+    fn max_encoded_len() -> usize {
+        Self::MAX_CONTRACT_BYTE_SIZE
     }
 }
 
