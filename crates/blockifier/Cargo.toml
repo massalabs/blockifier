@@ -13,13 +13,12 @@ std = [
     "num-bigint/std",
 ]
 testing = []
-scale-codec = ["parity-scale-codec"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cairo-felt = { workspace = true, features = ["alloc"] }
-cairo-vm = { workspace = true, features = ["cairo-1-hints", "scale-codec"] }
+cairo-vm = { workspace = true, features = ["cairo-1-hints", "parity-scale-codec"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-casm-contract-class = { workspace = true }
 cairo-lang-utils = { workspace = true }

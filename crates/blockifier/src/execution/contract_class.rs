@@ -9,7 +9,7 @@ use cairo_vm::types::program::Program;
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_NAME};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode};
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -33,7 +33,7 @@ use crate::stdlib::vec::Vec;
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
 #[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
-#[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -57,7 +57,7 @@ impl ContractClass {
 
 // V0.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-#[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
     type Target = ContractClassV0Inner;
@@ -115,7 +115,7 @@ pub struct ContractClassV0Inner {
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
 }
 
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 impl Encode for ContractClassV0Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
@@ -127,7 +127,7 @@ impl Encode for ContractClassV0Inner {
     }
 }
 
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 impl Decode for ContractClassV0Inner {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
@@ -152,7 +152,7 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 
 // V1.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
-#[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
     type Target = ContractClassV1Inner;
@@ -225,7 +225,7 @@ pub struct ContractClassV1Inner {
     pub hints: HashMap<String, Hint>,
 }
 
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 impl Encode for ContractClassV1Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
@@ -238,7 +238,7 @@ impl Encode for ContractClassV1Inner {
     }
 }
 
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 impl Decode for ContractClassV1Inner {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
@@ -255,7 +255,7 @@ impl Decode for ContractClassV1Inner {
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
-#[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct EntryPointV1 {
     pub selector: EntryPointSelector,
     pub offset: EntryPointOffset,
@@ -385,7 +385,7 @@ fn convert_entry_points_v1(
 }
 
 #[cfg(test)]
-#[cfg(feature = "scale-codec")]
+#[cfg(feature = "parity-scale-codec")]
 mod test {
     use parity_scale_codec::{Decode, Encode};
 
