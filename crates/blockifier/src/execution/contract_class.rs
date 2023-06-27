@@ -32,7 +32,7 @@ use crate::stdlib::vec::Vec;
 /// We wrap the actual class in an Arc to avoid cloning the program when cloning the class.
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
-#[derive(Clone, Debug, Eq, PartialEq, derive_more::From)]
+#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
 #[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
 pub enum ContractClass {
     V0(ContractClassV0),
@@ -151,7 +151,7 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 }
 
 // V1.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
 #[cfg_attr(feature = "scale-codec", derive(Encode, Decode))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
