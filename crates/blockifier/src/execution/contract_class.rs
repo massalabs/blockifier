@@ -11,6 +11,8 @@ use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 #[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+#[cfg(feature = "parity-scale-codec")]
+use scale_info::{build::Fields, Path, Type, TypeInfo};
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer, Serialize};
 use starknet_api::api_core::EntryPointSelector;
@@ -34,7 +36,7 @@ use crate::stdlib::vec::Vec;
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
 #[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -71,7 +73,7 @@ impl MaxEncodedLen for ContractClass {
 
 // V0.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
     type Target = ContractClassV0Inner;
@@ -153,6 +155,18 @@ impl Decode for ContractClassV0Inner {
     }
 }
 
+#[cfg(feature = "parity-scale-codec")]
+impl TypeInfo for ContractClassV0Inner {
+    type Identity = Self;
+    // The type info is saying that the ContractClassV0Inner must be seen as an
+    // array of bytes.
+    fn type_info() -> Type {
+        Type::builder().path(Path::new("ContractClassV0Inner", module_path!())).composite(
+            Fields::unnamed().field(|f| f.ty::<[u8]>().type_name("ContractClassV0Inner")),
+        )
+    }
+}
+
 impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
     type Error = ProgramError;
 
@@ -166,7 +180,7 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 
 // V1.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
     type Target = ContractClassV1Inner;
@@ -271,6 +285,18 @@ impl Decode for ContractClassV1Inner {
             <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1.into_iter());
         let hints = <HashMap<String, Hint>>::from_iter(res.2.into_iter());
         Ok(ContractClassV1Inner { program: res.0, entry_points_by_type, hints })
+    }
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl TypeInfo for ContractClassV1Inner {
+    type Identity = Self;
+    // The type info is saying that the ContractClassV0Inner must be seen as an
+    // array of bytes.
+    fn type_info() -> Type {
+        Type::builder().path(Path::new("ContractClassV1Inner", module_path!())).composite(
+            Fields::unnamed().field(|f| f.ty::<[u8]>().type_name("ContractClassV1Inner")),
+        )
     }
 }
 
