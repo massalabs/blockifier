@@ -1,9 +1,9 @@
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_vm::serde::deserialize_program::parse_program;
 use cairo_vm::serde::deserialize_program::{
-    ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
+    parse_program, parse_program_json, ApTracking, BuiltinName, FlowTrackingData, HintParams,
+    ProgramJson, ReferenceManager,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
 use cairo_vm::types::program::Program;
@@ -14,12 +14,11 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResour
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 #[cfg(feature = "parity-scale-codec")]
 use scale_info::{build::Fields, Path, Type, TypeInfo};
-use serde::de::Error as DeserializationError;
+use serde::de::{self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use starknet_api::api_core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass, EntryPoint, EntryPointOffset, EntryPointType,
-    Program as DeprecatedProgram,
 };
 
 use crate::abi::constants;
@@ -105,7 +104,7 @@ impl ContractClassV0 {
             + self.n_builtins()
             + self.bytecode_length()
             + 1; // Hinted class hash.
-                 // The hashed data size is approximately the number of hashes (invoked in hash chains).
+        // The hashed data size is approximately the number of hashes (invoked in hash chains).
         let n_steps = constants::N_STEPS_PER_PEDERSEN * hashed_data_size;
 
         VmExecutionResources {
@@ -345,7 +344,7 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
             BuiltinName::ec_op,
             BuiltinName::poseidon,
         ];
-        let main = Some(0);
+        let main = None;
         let reference_manager = ReferenceManager { references: Vec::new() };
         let identifiers = HashMap::new();
         let error_message_attributes = vec![];
@@ -390,9 +389,9 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
 pub fn deserialize_program<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Program, D::Error> {
-    let deprecated_program = DeprecatedProgram::deserialize(deserializer)?;
-    sn_api_to_cairo_vm_program(deprecated_program)
-        .map_err(|err| DeserializationError::custom(err.to_string()))
+    let prog = ProgramJson::deserialize(deserializer)?;
+    parse_program_json(prog, None)
+        .map_err(|e| de::Error::custom(format!("couldn't convert programjson to program {e:}")))
 }
 
 /// Serializes the Program using the ProgramJson
@@ -453,11 +452,9 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_contract_v1() {
         let contract = ContractClassV1::from_file(TEST_CONTRACT_CAIRO1_PATH);
-
-        pretty_assertions::assert_eq!(
-            contract,
-            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
-        )
+        let contr: ContractClassV1 =
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap();
+        pretty_assertions::assert_eq!(contract, contr)
     }
 }
 
