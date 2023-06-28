@@ -105,7 +105,7 @@ impl ContractClassV0 {
             + self.n_builtins()
             + self.bytecode_length()
             + 1; // Hinted class hash.
-        // The hashed data size is approximately the number of hashes (invoked in hash chains).
+                 // The hashed data size is approximately the number of hashes (invoked in hash chains).
         let n_steps = constants::N_STEPS_PER_PEDERSEN * hashed_data_size;
 
         VmExecutionResources {
@@ -126,8 +126,7 @@ impl ContractClassV0 {
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV0Inner {
-    #[serde(deserialize_with = "deserialize_program")]
-    #[serde(serialize_with = "serialize_program")]
+    #[serde(with = "serde_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
 }
@@ -254,8 +253,7 @@ impl ContractClassV1 {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV1Inner {
-    #[serde(deserialize_with = "deserialize_program")]
-    #[serde(serialize_with = "serialize_program")]
+    #[serde(with = "serde_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV1>>,
     pub hints: HashMap<String, Hint>,
@@ -384,22 +382,21 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
 
 // V0 utilities.
 
-/// Converts the program type from SN API into a Cairo VM-compatible type.
-pub fn deserialize_program<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Program, D::Error> {
-    let prog = ProgramJson::deserialize(deserializer)?;
-    parse_program_json(prog, None)
-        .map_err(|e| de::Error::custom(format!("couldn't convert programjson to program {e:}")))
-}
+mod serde_program {
+    use super::*;
 
-/// Serializes the Program using the ProgramJson
-pub fn serialize_program<S: Serializer>(
-    program: &Program,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    let program = parse_program(program.clone());
-    program.serialize(serializer)
+    /// Serializes the Program using the ProgramJson
+    pub fn serialize<S: Serializer>(program: &Program, serializer: S) -> Result<S::Ok, S::Error> {
+        let program = parse_program(program.clone());
+        program.serialize(serializer)
+    }
+
+    /// Deserializes the Program using the ProgramJson
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Program, D::Error> {
+        let prog = ProgramJson::deserialize(deserializer)?;
+        parse_program_json(prog, None)
+            .map_err(|e| de::Error::custom(format!("couldn't convert programjson to program {e:}")))
+    }
 }
 
 // V1 utilities.
@@ -451,9 +448,11 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_contract_v1() {
         let contract = ContractClassV1::from_file(TEST_CONTRACT_CAIRO1_PATH);
-        let contr: ContractClassV1 =
-            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap();
-        pretty_assertions::assert_eq!(contract, contr)
+
+        assert_eq!(
+            contract,
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
+        )
     }
 }
 
