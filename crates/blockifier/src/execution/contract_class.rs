@@ -2,7 +2,8 @@ use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::serde::deserialize_program::{
-    ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
+    parse_program, parse_program_json, ApTracking, BuiltinName, FlowTrackingData, HintParams,
+    ProgramJson, ReferenceManager,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
 use cairo_vm::types::program::Program;
@@ -11,12 +12,13 @@ use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 #[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use serde::de::Error as DeserializationError;
-use serde::{Deserialize, Deserializer, Serialize};
+#[cfg(feature = "parity-scale-codec")]
+use scale_info::{build::Fields, Path, Type, TypeInfo};
+use serde::de::{self};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use starknet_api::api_core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass, EntryPoint, EntryPointOffset, EntryPointType,
-    Program as DeprecatedProgram,
 };
 
 use crate::abi::constants;
@@ -32,8 +34,8 @@ use crate::stdlib::vec::Vec;
 /// We wrap the actual class in an Arc to avoid cloning the program when cloning the class.
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
-#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Serialize, Deserialize)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -69,8 +71,8 @@ impl MaxEncodedLen for ContractClass {
 }
 
 // V0.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
     type Target = ContractClassV0Inner;
@@ -121,9 +123,9 @@ impl ContractClassV0 {
     }
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV0Inner {
-    #[serde(deserialize_with = "deserialize_program")]
+    #[serde(with = "serde_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
 }
@@ -152,6 +154,18 @@ impl Decode for ContractClassV0Inner {
     }
 }
 
+#[cfg(feature = "parity-scale-codec")]
+impl TypeInfo for ContractClassV0Inner {
+    type Identity = Self;
+    // The type info is saying that the ContractClassV0Inner must be seen as an
+    // array of bytes.
+    fn type_info() -> Type {
+        Type::builder().path(Path::new("ContractClassV0Inner", module_path!())).composite(
+            Fields::unnamed().field(|f| f.ty::<[u8]>().type_name("ContractClassV0Inner")),
+        )
+    }
+}
+
 impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
     type Error = ProgramError;
 
@@ -164,8 +178,8 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 }
 
 // V1.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
     type Target = ContractClassV1Inner;
@@ -230,9 +244,9 @@ impl ContractClassV1 {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV1Inner {
-    #[serde(deserialize_with = "deserialize_program")]
+    #[serde(with = "serde_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV1>>,
     pub hints: HashMap<String, Hint>,
@@ -264,6 +278,18 @@ impl Decode for ContractClassV1Inner {
             <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1.into_iter());
         let hints = <HashMap<String, Hint>>::from_iter(res.2.into_iter());
         Ok(ContractClassV1Inner { program: res.0, entry_points_by_type, hints })
+    }
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl TypeInfo for ContractClassV1Inner {
+    type Identity = Self;
+    // The type info is saying that the ContractClassV0Inner must be seen as an
+    // array of bytes.
+    fn type_info() -> Type {
+        Type::builder().path(Path::new("ContractClassV1Inner", module_path!())).composite(
+            Fields::unnamed().field(|f| f.ty::<[u8]>().type_name("ContractClassV1Inner")),
+        )
     }
 }
 
@@ -316,7 +342,7 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
             BuiltinName::ec_op,
             BuiltinName::poseidon,
         ];
-        let main = Some(0);
+        let main = None;
         let reference_manager = ReferenceManager { references: Vec::new() };
         let identifiers = HashMap::new();
         let error_message_attributes = vec![];
@@ -357,14 +383,24 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
 
 // V0 utilities.
 
-/// Converts the program type from SN API into a Cairo VM-compatible type.
-pub fn deserialize_program<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Program, D::Error> {
-    let deprecated_program = DeprecatedProgram::deserialize(deserializer)?;
-    sn_api_to_cairo_vm_program(deprecated_program)
-        .map_err(|err| DeserializationError::custom(err.to_string()))
+mod serde_program {
+    use super::*;
+
+    /// Serializes the Program using the ProgramJson
+    pub fn serialize<S: Serializer>(program: &Program, serializer: S) -> Result<S::Ok, S::Error> {
+        let program = parse_program(program.clone());
+        program.serialize(serializer)
+    }
+
+    /// Deserializes the Program using the ProgramJson
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Program, D::Error> {
+        let prog = ProgramJson::deserialize(deserializer)?;
+        parse_program_json(prog, None)
+            .map_err(|e| de::Error::custom(format!("couldn't convert programjson to program {e:}")))
+    }
 }
+
+pub use serde_program::{deserialize, serialize};
 
 // V1 utilities.
 
@@ -398,8 +434,34 @@ fn convert_entry_points_v1(
 }
 
 #[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::{TEST_CONTRACT_CAIRO1_PATH, TEST_CONTRACT_PATH};
+
+    #[test]
+    fn test_serialize_deserialize_contract_v0() {
+        let contract = ContractClassV0::from_file(TEST_CONTRACT_PATH);
+
+        assert_eq!(
+            contract,
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
+        )
+    }
+
+    #[test]
+    fn test_serialize_deserialize_contract_v1() {
+        let contract = ContractClassV1::from_file(TEST_CONTRACT_CAIRO1_PATH);
+
+        assert_eq!(
+            contract,
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
+        )
+    }
+}
+
+#[cfg(test)]
 #[cfg(feature = "parity-scale-codec")]
-mod test {
+mod tests_scale_codec {
     use parity_scale_codec::{Decode, Encode};
 
     use crate::execution::contract_class::{ContractClassV0, ContractClassV1};
