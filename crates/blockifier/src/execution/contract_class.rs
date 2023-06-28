@@ -400,6 +400,8 @@ mod serde_program {
     }
 }
 
+pub use serde_program::{deserialize, serialize};
+
 // V1 utilities.
 
 // TODO(spapini): Share with cairo-lang-runner.
