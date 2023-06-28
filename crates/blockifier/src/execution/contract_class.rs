@@ -1,6 +1,7 @@
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_vm::serde::deserialize_program::parse_program;
 use cairo_vm::serde::deserialize_program::{
     ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
 };
@@ -14,7 +15,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 #[cfg(feature = "parity-scale-codec")]
 use scale_info::{build::Fields, Path, Type, TypeInfo};
 use serde::de::Error as DeserializationError;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use starknet_api::api_core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass, EntryPoint, EntryPointOffset, EntryPointType,
@@ -34,7 +35,7 @@ use crate::stdlib::vec::Vec;
 /// We wrap the actual class in an Arc to avoid cloning the program when cloning the class.
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
-#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Serialize, Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub enum ContractClass {
     V0(ContractClassV0),
@@ -71,7 +72,7 @@ impl MaxEncodedLen for ContractClass {
 }
 
 // V0.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
@@ -123,9 +124,10 @@ impl ContractClassV0 {
     }
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV0Inner {
     #[serde(deserialize_with = "deserialize_program")]
+    #[serde(serialize_with = "serialize_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
 }
@@ -178,7 +180,7 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 }
 
 // V1.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
@@ -244,9 +246,10 @@ impl ContractClassV1 {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractClassV1Inner {
     #[serde(deserialize_with = "deserialize_program")]
+    #[serde(serialize_with = "serialize_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV1>>,
     pub hints: HashMap<String, Hint>,
@@ -392,6 +395,15 @@ pub fn deserialize_program<'de, D: Deserializer<'de>>(
         .map_err(|err| DeserializationError::custom(err.to_string()))
 }
 
+/// Serializes the Program using the ProgramJson
+pub fn serialize_program<S: Serializer>(
+    program: &Program,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let program = parse_program(program.clone());
+    program.serialize(serializer)
+}
+
 // V1 utilities.
 
 // TODO(spapini): Share with cairo-lang-runner.
@@ -424,8 +436,34 @@ fn convert_entry_points_v1(
 }
 
 #[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::{TEST_CONTRACT_CAIRO1_PATH, TEST_CONTRACT_PATH};
+
+    #[test]
+    fn test_serialize_deserialize_contract_v0() {
+        let contract = ContractClassV0::from_file(TEST_CONTRACT_PATH);
+
+        assert_eq!(
+            contract,
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
+        )
+    }
+
+    #[test]
+    fn test_serialize_deserialize_contract_v1() {
+        let contract = ContractClassV1::from_file(TEST_CONTRACT_CAIRO1_PATH);
+
+        pretty_assertions::assert_eq!(
+            contract,
+            serde_json::from_slice(&serde_json::to_vec(&contract).unwrap()).unwrap()
+        )
+    }
+}
+
+#[cfg(test)]
 #[cfg(feature = "parity-scale-codec")]
-mod test {
+mod tests_scale_codec {
     use parity_scale_codec::{Decode, Encode};
 
     use crate::execution::contract_class::{ContractClassV0, ContractClassV1};
