@@ -13,9 +13,10 @@ std = [
     "num-bigint/std",
 ]
 testing = []
-parity-scale-codec = [
+codec = [
     "dep:parity-scale-codec",
     "dep:scale-info",
+    "starknet_api/codec"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
