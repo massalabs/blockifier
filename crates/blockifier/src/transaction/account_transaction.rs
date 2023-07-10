@@ -188,7 +188,7 @@ impl AccountTransaction {
         Ok(state.increment_nonce(address)?)
     }
 
-    fn validate_tx(
+    pub fn validate_tx(
         &self,
         state: &mut dyn State,
         resources: &mut ExecutionResources,
