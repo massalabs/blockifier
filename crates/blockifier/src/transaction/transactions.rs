@@ -73,6 +73,10 @@ pub trait Executable<S: State> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(
+    feature = "codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode, scale_info::TypeInfo)
+)]
 pub struct DeclareTransaction {
     tx: starknet_api::transaction::DeclareTransaction,
     contract_class: ContractClass,
