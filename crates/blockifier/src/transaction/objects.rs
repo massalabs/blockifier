@@ -1,7 +1,10 @@
 use itertools::concat;
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::{Fee, TransactionHash, TransactionSignature, TransactionVersion};
+use starknet_api::transaction::{
+    DeclareTransaction, DeployAccountTransaction, Fee, InvokeTransaction, TransactionHash,
+    TransactionSignature, TransactionVersion,
+};
 
 use crate::execution::entry_point::CallInfo;
 use crate::stdlib::collections::{HashMap, HashSet};
@@ -25,6 +28,48 @@ pub struct AccountTransactionContext {
 impl AccountTransactionContext {
     pub fn is_v0(&self) -> bool {
         self.version == TransactionVersion(StarkFelt::try_from(0_u8).unwrap())
+    }
+}
+
+impl From<InvokeTransaction> for AccountTransactionContext {
+    fn from(tx: InvokeTransaction) -> Self {
+        AccountTransactionContext {
+            transaction_hash: tx.transaction_hash(),
+            max_fee: tx.max_fee(),
+            version: match tx {
+                InvokeTransaction::V0(_) => TransactionVersion(StarkFelt::from(0_u8)),
+                InvokeTransaction::V1(_) => TransactionVersion(StarkFelt::from(1_u8)),
+            },
+            signature: tx.signature(),
+            nonce: tx.nonce(),
+            sender_address: tx.sender_address(),
+        }
+    }
+}
+
+impl From<DeployAccountTransaction> for AccountTransactionContext {
+    fn from(tx: DeployAccountTransaction) -> Self {
+        AccountTransactionContext {
+            transaction_hash: tx.transaction_hash,
+            max_fee: tx.max_fee,
+            version: tx.version,
+            signature: tx.signature.clone(),
+            nonce: tx.nonce,
+            sender_address: tx.contract_address,
+        }
+    }
+}
+
+impl From<DeclareTransaction> for AccountTransactionContext {
+    fn from(tx: DeclareTransaction) -> Self {
+        AccountTransactionContext {
+            transaction_hash: tx.transaction_hash(),
+            max_fee: tx.max_fee(),
+            version: tx.version(),
+            signature: tx.signature(),
+            nonce: tx.nonce(),
+            sender_address: tx.sender_address(),
+        }
     }
 }
 

@@ -113,35 +113,11 @@ impl AccountTransaction {
     fn get_account_transaction_context(&self) -> AccountTransactionContext {
         match self {
             Self::Declare(tx) => {
-                let tx = &tx.tx();
-                AccountTransactionContext {
-                    transaction_hash: tx.transaction_hash(),
-                    max_fee: tx.max_fee(),
-                    version: tx.version(),
-                    signature: tx.signature(),
-                    nonce: tx.nonce(),
-                    sender_address: tx.sender_address(),
-                }
+                let tx = tx.tx();
+                tx.clone().into()
             }
-            Self::DeployAccount(tx) => AccountTransactionContext {
-                transaction_hash: tx.transaction_hash,
-                max_fee: tx.max_fee,
-                version: tx.version,
-                signature: tx.signature.clone(),
-                nonce: tx.nonce,
-                sender_address: tx.contract_address,
-            },
-            Self::Invoke(tx) => AccountTransactionContext {
-                transaction_hash: tx.transaction_hash(),
-                max_fee: tx.max_fee(),
-                version: match tx {
-                    InvokeTransaction::V0(_) => TransactionVersion(StarkFelt::from(0_u8)),
-                    InvokeTransaction::V1(_) => TransactionVersion(StarkFelt::from(1_u8)),
-                },
-                signature: tx.signature(),
-                nonce: tx.nonce(),
-                sender_address: tx.sender_address(),
-            },
+            Self::DeployAccount(tx) => tx.clone().into(),
+            Self::Invoke(tx) => tx.clone().into(),
         }
     }
 
