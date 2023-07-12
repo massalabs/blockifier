@@ -8,7 +8,7 @@ use crate::abi::constants;
 use crate::block_context::BlockContext;
 use crate::fee::fee_utils::calculate_l1_gas_by_vm_usage;
 use crate::stdlib::collections::HashMap;
-use crate::stdlib::string::String;
+use crate::stdlib::string::{String, ToString};
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::ResourcesMapping;
 
