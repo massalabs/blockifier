@@ -2,7 +2,7 @@ use cairo_felt::Felt252;
 use cairo_lang_casm::hints::{Hint, StarknetHint};
 use cairo_lang_casm::operand::{BinOpOperand, DerefOrImmediate, Operation, Register, ResOperand};
 use cairo_lang_vm_utils::execute_core_hint_base;
-use cairo_vm::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
+use cairo_vm::hint_processor::hint_processor_definition::{HintProcessorLogic, HintReference};
 use cairo_vm::serde::deserialize_program::ApTracking;
 use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::types::exec_scope::ExecutionScopes;
@@ -10,7 +10,7 @@ use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::hint_errors::HintError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
-use cairo_vm::vm::runners::cairo_runner::RunResources;
+use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
@@ -115,6 +115,9 @@ pub struct SyscallHintProcessor<'a> {
     hints: &'a HashMap<String, Hint>,
     // Transaction info. and signature segments; allocated on-demand.
     execution_info_ptr: Option<Relocatable>,
+
+    // Resources consumed during the run
+    run_resources: RunResources,
 }
 
 impl<'a> SyscallHintProcessor<'a> {
@@ -141,6 +144,7 @@ impl<'a> SyscallHintProcessor<'a> {
             accessed_keys: HashSet::new(),
             hints,
             execution_info_ptr: None,
+            run_resources: RunResources::default(),
         }
     }
 
@@ -405,14 +409,13 @@ fn get_ptr_from_res_operand_unchecked(vm: &mut VirtualMachine, res: &ResOperand)
     (vm.get_relocatable(cell_reloc).unwrap() + &base_offset).unwrap()
 }
 
-impl HintProcessor for SyscallHintProcessor<'_> {
+impl HintProcessorLogic for SyscallHintProcessor<'_> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         _constants: &HashMap<String, Felt252>,
-        _run_resources: &mut RunResources,
     ) -> HintExecutionResult {
         let hint = hint_data.downcast_ref::<Hint>().ok_or(HintError::WrongHintData)?;
         match hint {
@@ -430,6 +433,23 @@ impl HintProcessor for SyscallHintProcessor<'_> {
         _references: &[HintReference],
     ) -> Result<Box<dyn Any>, VirtualMachineError> {
         Ok(Box::new(self.hints[hint_code].clone()))
+    }
+}
+impl ResourceTracker for SyscallHintProcessor<'_> {
+    fn consumed(&self) -> bool {
+        self.run_resources.consumed()
+    }
+
+    fn consume_step(&mut self) {
+        self.run_resources.consume_step()
+    }
+
+    fn get_n_steps(&self) -> Option<usize> {
+        self.run_resources.get_n_steps()
+    }
+
+    fn run_resources(&self) -> &cairo_vm::vm::runners::cairo_runner::RunResources {
+        &self.run_resources
     }
 }
 

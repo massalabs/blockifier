@@ -3,14 +3,14 @@ use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_def
     BuiltinHintProcessor, HintProcessorData,
 };
 use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::get_ptr_from_var_name;
-use cairo_vm::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
+use cairo_vm::hint_processor::hint_processor_definition::{HintProcessorLogic, HintReference};
 use cairo_vm::serde::deserialize_program::ApTracking;
 use cairo_vm::types::exec_scope::ExecutionScopes;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::hint_errors::HintError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
-use cairo_vm::vm::runners::cairo_runner::RunResources;
+use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
@@ -109,6 +109,9 @@ pub struct DeprecatedSyscallHintProcessor<'a> {
     // Transaction info. and signature segments; allocated on-demand.
     tx_signature_start_ptr: Option<Relocatable>,
     tx_info_start_ptr: Option<Relocatable>,
+
+    // Resources consumed during the run.
+    run_resources: RunResources,
 }
 
 impl<'a> DeprecatedSyscallHintProcessor<'a> {
@@ -136,6 +139,7 @@ impl<'a> DeprecatedSyscallHintProcessor<'a> {
             builtin_hint_processor: extended_builtin_hint_processor(),
             tx_signature_start_ptr: None,
             tx_info_start_ptr: None,
+            run_resources: RunResources::default(),
         }
     }
 
@@ -324,30 +328,40 @@ impl<'a> DeprecatedSyscallHintProcessor<'a> {
     }
 }
 
-impl HintProcessor for DeprecatedSyscallHintProcessor<'_> {
+impl HintProcessorLogic for DeprecatedSyscallHintProcessor<'_> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
-        run_resources: &mut RunResources,
     ) -> HintExecutionResult {
         let hint = hint_data.downcast_ref::<HintProcessorData>().ok_or(HintError::WrongHintData)?;
         if hint_code::SYSCALL_HINTS.contains(hint.code.as_str()) {
             return self.execute_next_syscall(vm, &hint.ids_data, &hint.ap_tracking);
         }
 
-        self.builtin_hint_processor.execute_hint(
-            vm,
-            exec_scopes,
-            hint_data,
-            constants,
-            run_resources,
-        )
+        self.builtin_hint_processor.execute_hint(vm, exec_scopes, hint_data, constants)
     }
 }
 
+impl ResourceTracker for DeprecatedSyscallHintProcessor<'_> {
+    fn consumed(&self) -> bool {
+        self.run_resources.consumed()
+    }
+
+    fn consume_step(&mut self) {
+        self.run_resources.consume_step()
+    }
+
+    fn get_n_steps(&self) -> Option<usize> {
+        self.run_resources.get_n_steps()
+    }
+
+    fn run_resources(&self) -> &cairo_vm::vm::runners::cairo_runner::RunResources {
+        &self.run_resources
+    }
+}
 pub fn felt_to_bool(felt: StarkFelt) -> DeprecatedSyscallResult<bool> {
     if felt == StarkFelt::from(0_u8) {
         Ok(false)

@@ -104,7 +104,7 @@ impl ContractClassV0 {
             + self.n_builtins()
             + self.bytecode_length()
             + 1; // Hinted class hash.
-                 // The hashed data size is approximately the number of hashes (invoked in hash chains).
+        // The hashed data size is approximately the number of hashes (invoked in hash chains).
         let n_steps = constants::N_STEPS_PER_PEDERSEN * hashed_data_size;
 
         VmExecutionResources {
@@ -328,7 +328,10 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
             .hints
             .into_iter()
             .flat_map(|(_, hints)| {
-                hints.iter().map(|hint| (hint.to_string(), hint.clone())).collect::<Vec<_>>()
+                hints
+                    .iter()
+                    .map(|hint| (hint.representing_string(), hint.clone()))
+                    .collect::<Vec<_>>()
             })
             .collect();
 
@@ -407,7 +410,7 @@ pub use serde_program::{deserialize, serialize};
 // TODO(spapini): Share with cairo-lang-runner.
 fn hint_to_hint_params(hint: &cairo_lang_casm::hints::Hint) -> HintParams {
     HintParams {
-        code: hint.to_string(),
+        code: hint.representing_string(),
         accessible_scopes: vec![],
         flow_tracking_data: FlowTrackingData {
             ap_tracking: ApTracking::new(),
