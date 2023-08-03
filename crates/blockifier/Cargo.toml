@@ -12,15 +12,35 @@ default = ["std"]
 std = [
     "cairo-felt/std",
     "cairo-vm/std",
+    "cairo-lang-casm/std",
+    "cairo-lang-casm-contract-class/std",
+    "cairo-lang-utils/std",
+    "cairo-lang-vm-utils/std",
+    "indexmap/std",
+    "itertools/use_std",
+    "num-bigint/std",
+    "num-integer/std",
+    "num-traits/std",
+    "parity-scale-codec?/std",
+    "scale-info?/std",
+    "serde/std",
+    "serde_json/std",
+    "sha3/std",
     "starknet_api/std",
+    "strum/std",
+    "phf/std",
     "thiserror-no-std/std",
     "num-bigint/std",
-    "dep:cached"
+    "dep:cached",
+    "log/std",
+    "starknet-crypto/std",
 ]
-testing = []
+testing = ["parity-scale-codec"]
 parity-scale-codec = [
     "dep:parity-scale-codec",
     "dep:scale-info",
+    "starknet_api/parity-scale-codec",
+    "cairo-vm/parity-scale-codec",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -30,7 +50,7 @@ ark-ff.workspace = true
 ark-secp256k1.workspace = true
 cached = { workspace = true, optional = true }
 cairo-felt = { workspace = true, features = ["alloc"] }
-cairo-vm = { workspace = true, features = ["cairo-1-hints", "parity-scale-codec"] }
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-casm-contract-class = { workspace = true }
 cairo-lang-utils = { workspace = true }
