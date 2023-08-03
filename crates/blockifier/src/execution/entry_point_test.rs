@@ -1,4 +1,8 @@
 use num_bigint::BigInt;
+
+#[cfg(feature = "parity-scale-codec")]
+use parity_scale_codec::{Decode, Encode};
+
 use pretty_assertions::assert_eq;
 use starknet_api::api_core::{EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -547,4 +551,20 @@ Unknown location (pc=0:62)
         }
         other_error => panic!("Unexpected error type: {other_error:?}"),
     }
+}
+
+#[test]
+#[cfg(feature = "parity-scale-codec")]
+fn test_scale_trait_derivation() {
+    let mut state = deprecated_create_test_state();
+
+    let entry_point_call = CallEntryPoint {
+        entry_point_selector: selector_from_name("test_storage_var"),
+        ..trivial_external_entry_point()
+    };
+
+    let actual_call_info = entry_point_call.execute_directly(&mut state).unwrap();
+    let encoded = actual_call_info.encode();
+    let decoded = CallInfo::decode(&mut encoded.as_slice()).expect("Failed to decode");
+    assert_eq!(actual_call_info, decoded);
 }
