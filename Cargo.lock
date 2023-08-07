@@ -823,6 +823,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec",
  "impl-serde",
+ "scale-info",
  "uint",
 ]
 
@@ -1119,7 +1120,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/keep-starknet-strange/starknet-api?branch=no_std-support#dd68b2a8e9f97818f0618a2f459351f26f594630"
+source = "git+https://github.com/keep-starknet-strange/starknet-api?branch=no_std-support#3dfa00e8b29e60d7b326766cec433885ae622589"
 dependencies = [
  "cairo-lang-casm-contract-class",
  "derive_more",
@@ -1129,6 +1130,7 @@ dependencies = [
  "once_cell",
  "parity-scale-codec",
  "primitive-types",
+ "scale-info",
  "serde",
  "serde_json",
  "starknet-crypto",
