@@ -1,5 +1,5 @@
 #![cfg(test)]
-use std::collections::HashMap;
+use crate::stdlib::collections::HashMap;
 
 use starknet_api::api_core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};

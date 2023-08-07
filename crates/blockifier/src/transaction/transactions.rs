@@ -95,6 +95,11 @@ pub trait Executable<S: State> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct DeclareTransaction {
     tx: starknet_api::transaction::DeclareTransaction,
     tx_hash: TransactionHash,
@@ -204,6 +209,11 @@ impl<S: State> Executable<S> for DeclareTransaction {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct DeployAccountTransaction {
     pub tx: starknet_api::transaction::DeployAccountTransaction,
     pub tx_hash: TransactionHash,
@@ -254,6 +264,11 @@ impl<S: State> Executable<S> for DeployAccountTransaction {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct InvokeTransaction {
     pub tx: starknet_api::transaction::InvokeTransaction,
     pub tx_hash: TransactionHash,
