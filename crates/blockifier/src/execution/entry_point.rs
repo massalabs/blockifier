@@ -203,6 +203,7 @@ pub struct OrderedEvent {
 
 #[derive(Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct MessageToL1 {
     pub to_address: EthAddress,
     pub payload: L2ToL1Payload,
