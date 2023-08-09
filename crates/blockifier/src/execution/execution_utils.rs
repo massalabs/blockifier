@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 use cairo_felt::Felt252;
-use cairo_lang_runner::short_string::as_cairo_short_string;
+use cairo_lang_utils::short_string::as_cairo_short_string;
 use cairo_vm::serde::deserialize_program::{
     deserialize_array_of_bigint_hex, Attribute, HintParams, Identifier, ReferenceManager,
 };
@@ -13,11 +14,12 @@ use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::vm::runners::cairo_runner::CairoArg;
 use cairo_vm::vm::vm_core::VirtualMachine;
 use num_bigint::BigUint;
-use starknet_api::core::ClassHash;
+use starknet_api::api_core::ClassHash;
 use starknet_api::deprecated_contract_class::Program as DeprecatedProgram;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::Calldata;
 
+use crate::collections::HashMap;
 use crate::execution::contract_class::ContractClass;
 use crate::execution::entry_point::{
     execute_constructor_entry_point, CallEntryPoint, CallInfo, ConstructorContext,

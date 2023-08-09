@@ -1,9 +1,11 @@
-use std::cmp::min;
+use alloc::string::String;
+use alloc::vec::Vec;
 
+use cairo_felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ResourceTracker;
 use itertools::concat;
+use starknet_api::api_core::{ContractAddress, EntryPointSelector, Nonce};
 use starknet_api::calldata;
-use starknet_api::core::{ContractAddress, EntryPointSelector, Nonce};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{Calldata, Fee, TransactionVersion};
@@ -11,6 +13,7 @@ use starknet_api::transaction::{Calldata, Fee, TransactionVersion};
 use crate::abi::abi_utils::selector_from_name;
 use crate::abi::constants as abi_constants;
 use crate::block_context::BlockContext;
+use crate::cmp::min;
 use crate::execution::contract_class::ContractClass;
 use crate::execution::entry_point::{
     CallEntryPoint, CallInfo, CallType, EntryPointExecutionContext, ExecutionResources, Retdata,

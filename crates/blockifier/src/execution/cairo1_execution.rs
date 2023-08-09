@@ -4,12 +4,11 @@ use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
 use cairo_vm::vm::runners::cairo_runner::{
-    CairoArg, CairoRunner, ExecutionResources as VmExecutionResources,
+    CairoArg, CairoRunner, ExecutionResources as VmExecutionResources, RunResources,
 };
 use cairo_vm::vm::vm_core::VirtualMachine;
 use num_traits::ToPrimitive;
 use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
 
 use crate::execution::contract_class::{ContractClassV1, EntryPointV1};
 use crate::execution::entry_point::{
@@ -173,7 +172,7 @@ fn prepare_program_extra_data(
     // additional `ret` statement).
     let mut ptr = (vm.get_pc() + contract_class.bytecode_length())?;
     // Push a `ret` opcode.
-    write_stark_felt(vm, &mut ptr, stark_felt!("0x208b7fff7fff7ffe"))?;
+    write_stark_felt(vm, &mut ptr, StarkFelt::try_from("0x208b7fff7fff7ffe").unwrap())?;
     // Push a pointer to the builtin cost segment.
     write_maybe_relocatable(vm, &mut ptr, builtin_cost_segment_start)?;
 

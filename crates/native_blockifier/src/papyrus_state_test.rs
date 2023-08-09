@@ -8,9 +8,9 @@ use blockifier::test_utils::{
     TEST_CONTRACT_ADDRESS, TEST_CONTRACT_CAIRO0_PATH,
 };
 use indexmap::IndexMap;
-use papyrus_storage::state::StateStorageWriter;
+use papyrus_storage::state::{StateStorageReader, StateStorageWriter};
+use starknet_api::api_core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::block::BlockNumber;
-use starknet_api::core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::{StateDiff, StorageKey};
 use starknet_api::transaction::Calldata;

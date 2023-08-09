@@ -8,8 +8,11 @@ use papyrus_storage::compiled_class::CasmStorageWriter;
 use papyrus_storage::header::{HeaderStorageReader, HeaderStorageWriter};
 use papyrus_storage::state::{StateStorageReader, StateStorageWriter};
 use pyo3::prelude::*;
+use starknet_api::api_core::{
+    ChainId, ClassHash, ClassHash, CompiledClassHash, CompiledClassHash, ContractAddress,
+    ContractAddress, GlobalRoot, GlobalRoot,
+};
 use starknet_api::block::{BlockHash, BlockHeader, BlockNumber, BlockTimestamp, GasPrice};
-use starknet_api::core::{ChainId, ClassHash, CompiledClassHash, ContractAddress, GlobalRoot};
 use starknet_api::deprecated_contract_class::ContractClass as DeprecatedContractClass;
 use starknet_api::hash::StarkHash;
 use starknet_api::state::{ContractClass, StateDiff, StateNumber};

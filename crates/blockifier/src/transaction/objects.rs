@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use alloc::string::String;
 
 use itertools::concat;
-use starknet_api::core::{ClassHash, ContractAddress, Nonce};
+use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
 use starknet_api::transaction::{Fee, TransactionHash, TransactionSignature, TransactionVersion};
 
+use crate::collections::{HashMap, HashSet};
 use crate::execution::entry_point::CallInfo;
 use crate::transaction::errors::TransactionExecutionError;
 
@@ -24,7 +24,7 @@ pub struct AccountTransactionContext {
 
 impl AccountTransactionContext {
     pub fn is_v0(&self) -> bool {
-        self.version == TransactionVersion(stark_felt!(0_u8))
+        self.version == TransactionVersion(StarkFelt::try_from(0_u8).unwrap())
     }
 }
 

@@ -1,6 +1,8 @@
-use std::sync::Arc;
+use alloc::string::String;
+use alloc::sync::Arc;
 
-use starknet_api::core::{ClassHash, ContractAddress, Nonce};
+use cairo_felt::Felt252;
+use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, Fee, TransactionHash, TransactionSignature, TransactionVersion,

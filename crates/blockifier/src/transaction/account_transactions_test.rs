@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use cairo_vm::vm::runners::cairo_runner::ResourceTracker;
 use rstest::{fixture, rstest};
-use starknet_api::core::{
+use starknet_api::api_core::{
     calculate_contract_address, ClassHash, ContractAddress, Nonce, PatriciaKey,
 };
 use starknet_api::hash::{StarkFelt, StarkHash};
@@ -16,6 +14,7 @@ use starknet_crypto::FieldElement;
 
 use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use crate::block_context::BlockContext;
+use crate::collections::HashMap;
 use crate::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use crate::execution::entry_point::EntryPointExecutionContext;
 use crate::state::cached_state::CachedState;

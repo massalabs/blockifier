@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::{Hint, StarknetHint};
 use cairo_lang_casm::operand::{BinOpOperand, DerefOrImmediate, Operation, Register, ResOperand};
-use cairo_lang_runner::casm_run::execute_core_hint_base;
+use cairo_lang_vm_utils::execute_core_hint_base;
 use cairo_vm::hint_processor::hint_processor_definition::{HintProcessorLogic, HintReference};
 use cairo_vm::serde::deserialize_program::ApTracking;
 use cairo_vm::types::errors::math_errors::MathError;
@@ -16,13 +16,13 @@ use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use num_traits::ToPrimitive;
-use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector};
+use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use starknet_api::StarknetApiError;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 use crate::abi::constants;
 use crate::execution::common_hints::HintExecutionResult;
@@ -494,6 +494,7 @@ impl HintProcessorLogic for SyscallHintProcessor<'_> {
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         _constants: &HashMap<String, Felt252>,
+        _run_resources: &mut RunResources,
     ) -> HintExecutionResult {
         let hint = hint_data.downcast_ref::<Hint>().ok_or(HintError::WrongHintData)?;
         match hint {

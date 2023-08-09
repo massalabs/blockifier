@@ -1,13 +1,16 @@
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+
 use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::runner_errors::RunnerError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use num_bigint::{BigInt, TryFromBigIntError};
-use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::api_core::{ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 use crate::execution::execution_utils::felts_as_str;
 use crate::state::errors::StateError;

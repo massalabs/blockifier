@@ -12,9 +12,10 @@ use blockifier::transaction::transactions::{
 };
 use num_bigint::BigUint;
 use pyo3::prelude::*;
-use starknet_api::core::{
+use starknet_api::api_core::{
     ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce,
 };
+use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
     Calldata, ContractAddressSalt, DeclareTransactionV0V1, DeclareTransactionV2, Fee,

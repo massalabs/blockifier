@@ -4,9 +4,9 @@ use std::convert::TryFrom;
 use blockifier::execution::contract_class::ContractClassV0;
 use blockifier::state::cached_state::CachedState;
 use blockifier::test_utils::DictStateReader;
+use starknet_api::api_core::ClassHash;
 use starknet_api::class_hash;
-use starknet_api::core::ClassHash;
-use starknet_api::hash::StarkHash;
+use starknet_api::hash::{StarkFelt, StarkHash};
 
 pub const TOKEN_FOR_TESTING_CLASS_HASH: &str = "0x30";
 // This package is run within the StarkWare repository build directory.

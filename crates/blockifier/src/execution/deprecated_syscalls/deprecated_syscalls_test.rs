@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use alloc::string::ToString;
 
 use cairo_vm::vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 use pretty_assertions::assert_eq;
-use starknet_api::core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey};
+use starknet_api::api_core::{calculate_contract_address, ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{Calldata, ContractAddressSalt};
@@ -11,6 +11,7 @@ use starknet_api::{calldata, class_hash, contract_address, patricia_key, stark_f
 use test_case::test_case;
 
 use crate::abi::abi_utils::selector_from_name;
+use crate::collections::{HashMap, HashSet};
 use crate::execution::entry_point::{CallEntryPoint, CallExecution, CallInfo, CallType, Retdata};
 use crate::retdata;
 use crate::state::state_api::StateReader;

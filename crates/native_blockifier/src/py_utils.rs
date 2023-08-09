@@ -4,7 +4,7 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use num_bigint::BigUint;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use starknet_api::core::{ChainId, ClassHash, CompiledClassHash, ContractAddress, EthAddress};
+use starknet_api::api_core::{ChainId, ClassHash, CompiledClassHash, ContractAddress, EthAddress};
 use starknet_api::hash::StarkFelt;
 
 use crate::errors::NativeBlockifierResult;
