@@ -110,9 +110,6 @@ pub struct DeprecatedSyscallHintProcessor<'a> {
     // Transaction info. and signature segments; allocated on-demand.
     tx_signature_start_ptr: Option<Relocatable>,
     tx_info_start_ptr: Option<Relocatable>,
-
-    // Resources consumed during the run.
-    run_resources: RunResources,
 }
 
 impl<'a> DeprecatedSyscallHintProcessor<'a> {
@@ -140,7 +137,6 @@ impl<'a> DeprecatedSyscallHintProcessor<'a> {
             builtin_hint_processor: extended_builtin_hint_processor(),
             tx_signature_start_ptr: None,
             tx_info_start_ptr: None,
-            run_resources: RunResources::default(),
         }
     }
 
@@ -364,23 +360,6 @@ impl HintProcessorLogic for DeprecatedSyscallHintProcessor<'_> {
     }
 }
 
-impl ResourceTracker for DeprecatedSyscallHintProcessor<'_> {
-    fn consumed(&self) -> bool {
-        self.run_resources.consumed()
-    }
-
-    fn consume_step(&mut self) {
-        self.run_resources.consume_step()
-    }
-
-    fn get_n_steps(&self) -> Option<usize> {
-        self.run_resources.get_n_steps()
-    }
-
-    fn run_resources(&self) -> &cairo_vm::vm::runners::cairo_runner::RunResources {
-        &self.run_resources
-    }
-}
 pub fn felt_to_bool(felt: StarkFelt) -> DeprecatedSyscallResult<bool> {
     if felt == StarkFelt::from(0_u8) {
         Ok(false)

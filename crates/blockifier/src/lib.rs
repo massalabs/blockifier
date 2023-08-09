@@ -11,9 +11,6 @@ pub mod test_utils;
 pub mod transaction;
 pub mod utils;
 
-#[cfg(test)]
-pub mod test_utils;
-
 #[cfg(feature = "std")]
 include!("./with_std.rs");
 

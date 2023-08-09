@@ -1,5 +1,5 @@
+use starknet_api::api_core::ContractAddress;
 use starknet_api::block::{BlockHash, BlockNumber};
-use starknet_api::core::ContractAddress;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 

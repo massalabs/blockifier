@@ -2,8 +2,8 @@ use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::serde::deserialize_program::{
-    parse_program, parse_program_json, ApTracking, BuiltinName, FlowTrackingData, HintParams,
-    ProgramJson, ReferenceManager,
+    parse_program, parse_program_json, ApTracking, FlowTrackingData, HintParams, ProgramJson,
+    ReferenceManager,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
 use cairo_vm::types::program::Program;
@@ -435,11 +435,11 @@ fn convert_entry_points_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{TEST_CONTRACT_CAIRO1_PATH, TEST_CONTRACT_PATH};
+    use crate::test_utils::{TEST_CONTRACT_CAIRO0_PATH, TEST_CONTRACT_CAIRO1_PATH};
 
     #[test]
     fn test_serialize_deserialize_contract_v0() {
-        let contract = ContractClassV0::from_file(TEST_CONTRACT_PATH);
+        let contract = ContractClassV0::from_file(TEST_CONTRACT_CAIRO0_PATH);
 
         assert_eq!(
             contract,
@@ -464,11 +464,11 @@ mod tests_scale_codec {
     use parity_scale_codec::{Decode, Encode};
 
     use crate::execution::contract_class::{ContractClassV0, ContractClassV1};
-    use crate::test_utils::{TEST_CONTRACT_CAIRO1_PATH, TEST_CONTRACT_PATH};
+    use crate::test_utils::{TEST_CONTRACT_CAIRO0_PATH, TEST_CONTRACT_CAIRO1_PATH};
 
     #[test]
     fn test_encode_decode_contract_v0() {
-        let contract = ContractClassV0::from_file(TEST_CONTRACT_PATH);
+        let contract = ContractClassV0::from_file(TEST_CONTRACT_CAIRO0_PATH);
         assert_eq!(contract, ContractClassV0::decode(&mut &contract.encode()[..]).unwrap())
     }
 

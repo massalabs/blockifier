@@ -1,4 +1,3 @@
-use cairo_felt::Felt252;
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::transaction::{

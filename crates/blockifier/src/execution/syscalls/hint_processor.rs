@@ -134,9 +134,6 @@ pub struct SyscallHintProcessor<'a> {
     hints: &'a HashMap<String, Hint>,
     // Transaction info. and signature segments; allocated on-demand.
     execution_info_ptr: Option<Relocatable>,
-
-    // Resources consumed during the run
-    run_resources: RunResources,
 }
 
 impl<'a> SyscallHintProcessor<'a> {
@@ -517,23 +514,6 @@ impl HintProcessorLogic for SyscallHintProcessor<'_> {
         _references: &[HintReference],
     ) -> Result<Box<dyn Any>, VirtualMachineError> {
         Ok(Box::new(self.hints[hint_code].clone()))
-    }
-}
-impl ResourceTracker for SyscallHintProcessor<'_> {
-    fn consumed(&self) -> bool {
-        self.run_resources.consumed()
-    }
-
-    fn consume_step(&mut self) {
-        self.run_resources.consume_step()
-    }
-
-    fn get_n_steps(&self) -> Option<usize> {
-        self.run_resources.get_n_steps()
-    }
-
-    fn run_resources(&self) -> &cairo_vm::vm::runners::cairo_runner::RunResources {
-        &self.run_resources
     }
 }
 

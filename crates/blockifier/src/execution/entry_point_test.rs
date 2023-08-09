@@ -1,5 +1,3 @@
-use alloc::string::ToString;
-
 use cairo_vm::serde::deserialize_program::BuiltinName;
 use num_bigint::BigInt;
 use pretty_assertions::assert_eq;

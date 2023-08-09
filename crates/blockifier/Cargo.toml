@@ -34,7 +34,7 @@ cairo-lang-casm = { workspace = true }
 cairo-lang-casm-contract-class = { workspace = true }
 cairo-lang-utils = { workspace = true }
 cairo-lang-vm-utils = { workspace = true, features = ["execute_core_hints"] }
-derive_more = { workspace = true, features = ["into_iterator", "from"] }
+derive_more = { workspace = true, features = ["into_iterator", "from","deref","deref_mut"] }
 indexmap = { workspace = true, features = ["serde"] }
 itertools = { workspace = true }
 keccak.workspace = true

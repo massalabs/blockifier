@@ -1,4 +1,4 @@
-use starknet_api::core::{calculate_contract_address, ContractAddress};
+use starknet_api::api_core::{calculate_contract_address, ContractAddress};
 use starknet_api::transaction::{
     Fee, Transaction as StarknetApiTransaction, TransactionHash, TransactionSignature,
 };

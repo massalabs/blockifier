@@ -1,4 +1,5 @@
 #![cfg(test)]
+
 use core::str::from_utf8;
 
 use cairo_felt::Felt252;
@@ -11,7 +12,7 @@ use starknet_api::api_core::{
     calculate_contract_address, ChainId, ClassHash, CompiledClassHash, ContractAddress,
     EntryPointSelector, Nonce, PatriciaKey,
 };
-use starknet_api::block::{BlockNumber, BlockTimestamp, BlockTimestamp};
+use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass, EntryPointType,
 };
@@ -61,24 +62,26 @@ pub const SECURITY_TEST_CLASS_HASH: &str = "0x114";
 pub const TEST_ERC20_CONTRACT_CLASS_HASH: &str = "0x1010";
 
 // Paths.
-pub const ACCOUNT_CONTRACT_CAIRO1_PATH: &str =
-    "./feature_contracts/cairo1/compiled/account_contract.casm.json";
-pub const ACCOUNT_CONTRACT_CAIRO0_PATH: &str =
-    "./feature_contracts/cairo0/compiled/account_without_validations_compiled.json";
-pub const TEST_CONTRACT_CAIRO0_PATH: &str =
-    "./feature_contracts/cairo0/compiled/test_contract_compiled.json";
-pub const TEST_CONTRACT_CAIRO1_PATH: &str =
-    "./feature_contracts/cairo1/compiled/test_contract.casm.json";
-pub const SECURITY_TEST_CONTRACT_CAIRO0_PATH: &str =
-    "./feature_contracts/cairo0/compiled/security_tests_contract_compiled.json";
-pub const TEST_EMPTY_CONTRACT_CAIRO0_PATH: &str =
-    "./feature_contracts/cairo0/compiled/empty_contract_compiled.json";
-pub const TEST_EMPTY_CONTRACT_CAIRO1_PATH: &str =
-    "./feature_contracts/cairo1/compiled/empty_contract.casm.json";
-pub const TEST_FAULTY_ACCOUNT_CONTRACT_CAIRO0_PATH: &str =
-    "./feature_contracts/cairo0/compiled/account_faulty_compiled.json";
-pub const ERC20_CONTRACT_PATH: &str =
-    "./ERC20_without_some_syscalls/ERC20/erc20_contract_without_some_syscalls_compiled.json";
+pub const ACCOUNT_CONTRACT_CAIRO1_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo1/compiled/account_contract.casm.json");
+pub const ACCOUNT_CONTRACT_CAIRO0_PATH: &[u8] = include_bytes!(
+    "../feature_contracts/cairo0/compiled/account_without_validations_compiled.json"
+);
+pub const TEST_CONTRACT_CAIRO0_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo0/compiled/test_contract_compiled.json");
+pub const TEST_CONTRACT_CAIRO1_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo1/compiled/test_contract.casm.json");
+pub const SECURITY_TEST_CONTRACT_CAIRO0_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo0/compiled/security_tests_contract_compiled.json");
+pub const TEST_EMPTY_CONTRACT_CAIRO0_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo0/compiled/empty_contract_compiled.json");
+pub const TEST_EMPTY_CONTRACT_CAIRO1_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo1/compiled/empty_contract.casm.json");
+pub const TEST_FAULTY_ACCOUNT_CONTRACT_CAIRO0_PATH: &[u8] =
+    include_bytes!("../feature_contracts/cairo0/compiled/account_faulty_compiled.json");
+pub const ERC20_CONTRACT_PATH: &[u8] = include_bytes!(
+    "../ERC20_without_some_syscalls/ERC20/erc20_contract_without_some_syscalls_compiled.json"
+);
 
 // Storage keys.
 pub fn test_erc20_sequencer_balance_key() -> StorageKey {

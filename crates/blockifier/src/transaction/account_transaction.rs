@@ -1,4 +1,3 @@
-use cairo_felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ResourceTracker;
 use itertools::concat;
 use starknet_api::api_core::{ContractAddress, EntryPointSelector, Nonce};

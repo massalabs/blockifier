@@ -1,10 +1,6 @@
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, ResourceTracker, RunResources,
 };
-use libm::floor;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector, EthAddress};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
