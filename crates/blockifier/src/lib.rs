@@ -31,7 +31,7 @@ mod sync {
     pub use std::sync::{Arc, Mutex, MutexGuard};
 
     #[cfg(not(feature = "std"))]
-    pub use parking_lot::{Mutex, MutexGuard};
+    pub use spin::{Mutex, MutexGuard};
 }
 
 mod cmp {

@@ -1,7 +1,6 @@
 #[cfg(feature = "std")]
 use std::collections::hash_map::RandomState as HasherBuilder;
 
-use cached::{Cached, SizedCache};
 use derive_more::IntoIterator;
 #[cfg(not(feature = "std"))]
 use hashbrown::hash_map::DefaultHashBuilder as HasherBuilder;
@@ -14,6 +13,7 @@ use crate::abi::abi_utils::get_erc20_balance_var_addresses;
 use crate::execution::contract_class::ContractClass;
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::cached::{Cached, SizedCache};
 use crate::stdlib::collections::{HashMap, HashSet};
 use crate::stdlib::vec::Vec;
 use crate::sync::{Arc, Mutex, MutexGuard};

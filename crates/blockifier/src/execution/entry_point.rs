@@ -1,6 +1,8 @@
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, ResourceTracker, RunResources,
 };
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore;
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector, EthAddress};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;

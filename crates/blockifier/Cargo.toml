@@ -15,6 +15,7 @@ std = [
     "starknet_api/std",
     "thiserror-no-std/std",
     "num-bigint/std",
+    "dep:cached"
 ]
 testing = []
 parity-scale-codec = [
@@ -27,7 +28,7 @@ parity-scale-codec = [
 [dependencies]
 ark-ff.workspace = true
 ark-secp256k1.workspace = true
-cached.workspace = true
+cached = { workspace = true, optional = true }
 cairo-felt = { workspace = true, features = ["alloc"] }
 cairo-vm = { workspace = true, features = ["cairo-1-hints", "parity-scale-codec"] }
 cairo-lang-casm = { workspace = true }
@@ -57,7 +58,7 @@ hashbrown = { workspace = true }
 lazy_static = { workspace = true }
 thiserror-no-std = { workspace = true }
 starknet-crypto = { workspace = true }
-parking_lot = { workspace = true }
+spin = { workspace = true }
 libm = { workspace = true }
 
 [dev-dependencies]

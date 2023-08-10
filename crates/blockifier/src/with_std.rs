@@ -4,4 +4,8 @@ pub mod with_std {
     pub mod collections {
         pub use std::collections::{HashMap, HashSet};
     }
+
+    pub mod cached {
+        pub use cached::{Cached, SizedCache};
+    }
 }
