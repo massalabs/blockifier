@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use starknet_api::transaction::Fee;
 
 use crate::abi::constants;
@@ -8,6 +6,8 @@ use crate::fee::eth_gas_constants;
 use crate::fee::fee_utils::calculate_tx_fee;
 use crate::fee::os_resources::OS_RESOURCES;
 use crate::state::cached_state::StateChangesCount;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::ToString;
 use crate::transaction::account_transaction::AccountTransaction;
 use crate::transaction::objects::{ResourcesMapping, TransactionExecutionResult};
 

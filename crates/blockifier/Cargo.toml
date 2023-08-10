@@ -57,7 +57,7 @@ hashbrown = { workspace = true }
 lazy_static = { workspace = true }
 thiserror-no-std = { workspace = true }
 starknet-crypto = { workspace = true }
-spin = { workspace = true }
+parking_lot = { workspace = true }
 libm = { workspace = true }
 
 [dev-dependencies]

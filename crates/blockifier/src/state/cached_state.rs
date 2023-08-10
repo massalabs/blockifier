@@ -15,6 +15,7 @@ use crate::execution::contract_class::ContractClass;
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
 use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::vec::Vec;
 use crate::sync::{Arc, Mutex, MutexGuard};
 use crate::utils::subtract_mappings;
 
@@ -154,7 +155,13 @@ impl<S: StateReader> CachedState<S> {
     pub fn global_class_hash_to_class(
         &mut self,
     ) -> MutexGuard<'_, SizedCache<ClassHash, ContractClass>> {
-        self.global_class_hash_to_class.lock().expect("Global contract cache is poisoned.")
+        #[cfg(feature = "std")]
+        return self.global_class_hash_to_class.lock().expect("Global contract cache is poisoned.");
+        #[cfg(not(feature = "std"))]
+        return self
+            .global_class_hash_to_class
+            .try_lock()
+            .expect("Global contract cache is poisoned.");
     }
 }
 
@@ -593,12 +600,13 @@ impl<'a, S: StateReader> TransactionalState<'a, S> {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CommitmentStateDiff {
     // Contract instance attributes (per address).
-    pub address_to_class_hash: IndexMap<ContractAddress, ClassHash>,
-    pub address_to_nonce: IndexMap<ContractAddress, Nonce>,
-    pub storage_updates: IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt>>,
+    pub address_to_class_hash: IndexMap<ContractAddress, ClassHash, HasherBuilder>,
+    pub address_to_nonce: IndexMap<ContractAddress, Nonce, HasherBuilder>,
+    pub storage_updates:
+        IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt, HasherBuilder>, HasherBuilder>,
 
     // Global attributes.
-    pub class_hash_to_compiled_class_hash: IndexMap<ClassHash, CompiledClassHash>,
+    pub class_hash_to_compiled_class_hash: IndexMap<ClassHash, CompiledClassHash, HasherBuilder>,
 }
 
 /// Holds the state changes.

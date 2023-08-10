@@ -22,7 +22,7 @@ use crate::state::cached_state::{
     CachedState, StateChanges, StateChangesCount, TransactionalState,
 };
 use crate::state::state_api::{State, StateReader};
-use crate::stdlib::string::String;
+use crate::stdlib::string::{String, ToString};
 use crate::stdlib::vec::Vec;
 use crate::transaction::constants;
 use crate::transaction::errors::TransactionExecutionError;
