@@ -341,7 +341,7 @@ impl TryFrom<CasmContractClass> for ContractClassV1 {
         }
 
         let builtins = vec![]; // The builtins are initialize later.
-        let main = Some(0);
+        let main = None;
         let reference_manager = ReferenceManager { references: Vec::new() };
         let identifiers = HashMap::new();
         let error_message_attributes = vec![];
