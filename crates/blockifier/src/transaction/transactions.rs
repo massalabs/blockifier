@@ -96,9 +96,9 @@ pub trait Executable<S: State> {
 
 #[derive(Debug)]
 pub struct DeclareTransaction {
-    pub tx: starknet_api::transaction::DeclareTransaction,
-    pub tx_hash: TransactionHash,
-    pub contract_class: ContractClass,
+    tx: starknet_api::transaction::DeclareTransaction,
+    tx_hash: TransactionHash,
+    contract_class: ContractClass,
 }
 
 impl DeclareTransaction {
