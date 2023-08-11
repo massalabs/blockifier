@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-blockifier = { path = "../crates/blockifier", default-features = false, features = ["parity-scale-codec"] }
+blockifier = { path = "../crates/blockifier", default-features = false, features = ["testing", "parity-scale-codec"] }
 
 wee_alloc = "0.4.5"
 
