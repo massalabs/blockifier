@@ -8,20 +8,22 @@ use papyrus_storage::compiled_class::CasmStorageWriter;
 use papyrus_storage::header::{HeaderStorageReader, HeaderStorageWriter};
 use papyrus_storage::state::{StateStorageReader, StateStorageWriter};
 use pyo3::prelude::*;
+use starknet_api::api_core::{
+    ChainId, ClassHash, ClassHash, CompiledClassHash, CompiledClassHash, ContractAddress,
+    ContractAddress, GlobalRoot, GlobalRoot,
+};
 use starknet_api::block::{BlockHash, BlockHeader, BlockNumber, BlockTimestamp, GasPrice};
-use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, GlobalRoot};
 use starknet_api::deprecated_contract_class::ContractClass as DeprecatedContractClass;
 use starknet_api::hash::StarkHash;
 use starknet_api::state::{ContractClass, StateDiff, StateNumber};
 
 use crate::errors::NativeBlockifierResult;
 use crate::py_state_diff::PyBlockInfo;
-use crate::py_utils::PyFelt;
+use crate::py_utils::{int_to_chain_id, PyFelt};
 use crate::PyStateDiff;
 
 const GENESIS_BLOCK_ID: u64 = u64::MAX;
 
-#[pyclass]
 // Invariant: Only one instance of this struct should exist.
 // Reader and writer fields must be cleared before the struct goes out of scope in Python;
 // to prevent possible memory leaks (TODO: see if this is indeed necessary).
@@ -30,16 +32,14 @@ pub struct Storage {
     writer: Option<papyrus_storage::StorageWriter>,
 }
 
-#[pymethods]
 impl Storage {
-    #[new]
-    #[args(path, max_size)]
-    pub fn new(path: PathBuf, max_size: usize) -> NativeBlockifierResult<Storage> {
+    pub fn new(config: StorageConfig) -> NativeBlockifierResult<Storage> {
         log::debug!("Initializing Blockifier storage...");
         let db_config = papyrus_storage::db::DbConfig {
-            path,
+            path_prefix: config.path_prefix,
+            chain_id: config.chain_id,
             min_size: 1 << 20, // 1MB.
-            max_size,
+            max_size: config.max_size,
             growth_step: 1 << 26, // 64MB.
         };
         let (reader, writer) = papyrus_storage::open_storage(db_config)?;
@@ -51,6 +51,7 @@ impl Storage {
     /// Manually drops the storage reader and writer.
     /// Python does not necessarily drop them even if instance is no longer live.
     pub fn close(&mut self) {
+        log::debug!("Closing Blockifier storage.");
         self.reader = None;
         self.writer = None;
     }
@@ -61,16 +62,11 @@ impl Storage {
         Ok(block_number.0)
     }
 
-    /// Returns the next block number, for which block header was not yet appended.
-    /// Block header stream is usually ahead of the state diff stream, so this is the indicative
-    /// marker.
     pub fn get_header_marker(&self) -> NativeBlockifierResult<u64> {
         let block_number = self.reader().begin_ro_txn()?.get_header_marker()?;
         Ok(block_number.0)
     }
 
-    #[args(block_number)]
-    /// Returns the unique identifier of the given block number in bytes.
     pub fn get_block_id(&self, block_number: u64) -> NativeBlockifierResult<Option<Vec<u8>>> {
         let block_number = BlockNumber(block_number);
         let block_hash = self
@@ -81,10 +77,6 @@ impl Storage {
         Ok(block_hash)
     }
 
-    /// Atomically reverts block header and state diff of given block number.
-    /// If header exists without a state diff (usually the case), only the header is reverted.
-    /// (this is true for every partial existence of information at tables).
-    #[args(block_number)]
     pub fn revert_block(&mut self, block_number: u64) -> NativeBlockifierResult<()> {
         log::debug!("Reverting state diff for {block_number:?}.");
         let block_number = BlockNumber(block_number);
@@ -97,17 +89,6 @@ impl Storage {
     }
 
     // TODO(Gilad): Refactor.
-    #[args(
-        block_id,
-        previous_block_id,
-        py_block_info,
-        py_state_diff,
-        declared_class_hash_to_class,
-        deprecated_declared_class_hash_to_class
-    )]
-    /// Appends state diff and block header into Papyrus storage.
-    // Previous block ID can either be a block hash (starting from a Papyrus snapshot), or a
-    // sequential ID (throughout sequencing).
     pub fn append_block(
         &mut self,
         block_id: u64,
@@ -218,14 +199,63 @@ impl Storage {
         append_txn.commit()?;
         Ok(())
     }
-}
 
-// Internal getters, Python should not have access to them, and only use the public API.
-impl Storage {
+    pub fn new_for_testing(path_prefix: PathBuf, chain_id: &ChainId) -> Storage {
+        let db_config = papyrus_storage::db::DbConfig {
+            path_prefix,
+            chain_id: chain_id.clone(),
+            min_size: 1 << 20,    // 1MB
+            max_size: 1 << 35,    // 32GB
+            growth_step: 1 << 26, // 64MB
+        };
+        let (reader, writer) = papyrus_storage::open_storage(db_config).unwrap();
+
+        Storage { reader: Some(reader), writer: Some(writer) }
+    }
+
+    pub fn validate_aligned(&self, source_block_number: u64) {
+        let header_marker = self.get_header_marker().expect("Should have a header marker");
+        let state_marker = self.get_state_marker().expect("Should have a state marker");
+
+        assert_eq!(
+            header_marker, state_marker,
+            "Block header marker ({header_marker}) must be aligned to block state diff marker \
+             ({state_marker}) before sequencing starts."
+        );
+
+        assert_eq!(
+            state_marker, source_block_number,
+            "Target storage (block number {state_marker}) should have been aligned to block \
+             number {source_block_number}."
+        );
+    }
+
     pub fn reader(&self) -> &papyrus_storage::StorageReader {
         self.reader.as_ref().expect("Storage should be initialized.")
     }
+
     pub fn writer(&mut self) -> &mut papyrus_storage::StorageWriter {
         self.writer.as_mut().expect("Storage should be initialized.")
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct StorageConfig {
+    path_prefix: PathBuf,
+    chain_id: ChainId,
+    max_size: usize,
+}
+
+#[pymethods]
+impl StorageConfig {
+    #[new]
+    #[pyo3(signature = (path_prefix, chain_id, max_size))]
+    pub fn new(
+        path_prefix: PathBuf,
+        #[pyo3(from_py_with = "int_to_chain_id")] chain_id: ChainId,
+        max_size: usize,
+    ) -> Self {
+        Self { path_prefix, chain_id, max_size }
     }
 }

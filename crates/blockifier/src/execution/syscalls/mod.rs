@@ -1,21 +1,22 @@
 use cairo_felt::Felt252;
 use cairo_vm::types::relocatable::Relocatable;
 use cairo_vm::vm::vm_core::VirtualMachine;
-use starknet_api::block::BlockHash;
-use starknet_api::core::{
-    calculate_contract_address, ClassHash, ContractAddress, EntryPointSelector,
+use num_traits::ToPrimitive;
+use starknet_api::api_core::{
+    calculate_contract_address, ClassHash, ContractAddress, EntryPointSelector, EthAddress,
 };
+use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, EthAddress, EventContent, EventData, EventKey, L2ToL1Payload,
+    Calldata, ContractAddressSalt, EventContent, EventData, EventKey, L2ToL1Payload,
 };
 
 use self::hint_processor::{
     create_retdata_segment, execute_inner_call, execute_library_call, felt_to_bool,
     read_call_params, read_calldata, read_felt_array, write_segment, SyscallExecutionError,
-    SyscallHintProcessor,
+    SyscallHintProcessor, BLOCK_NUMBER_OUT_OF_RANGE_ERROR,
 };
 use crate::abi::constants;
 use crate::execution::contract_class::ContractClass;
@@ -24,11 +25,16 @@ use crate::execution::entry_point::{
     CallEntryPoint, CallType, ConstructorContext, MessageToL1, OrderedEvent, OrderedL2ToL1Message,
 };
 use crate::execution::execution_utils::{
-    execute_deployment, felt_from_ptr, stark_felt_from_ptr, stark_felt_to_felt, write_felt,
-    write_maybe_relocatable, write_stark_felt, ReadOnlySegment,
+    execute_deployment, felt_from_ptr, felt_to_stark_felt, stark_felt_from_ptr, stark_felt_to_felt,
+    write_felt, write_maybe_relocatable, write_stark_felt, ReadOnlySegment,
 };
+use crate::execution::syscalls::hint_processor::{INVALID_INPUT_LENGTH_ERROR, OUT_OF_GAS_ERROR};
+use crate::stdlib::string::String;
+use crate::stdlib::vec::Vec;
+use crate::transaction::transaction_utils::update_remaining_gas;
 
 pub mod hint_processor;
+mod secp;
 
 #[cfg(test)]
 #[path = "syscalls_test.rs"]
@@ -49,32 +55,37 @@ pub trait SyscallResponse {
 
 // Syscall header structs.
 pub struct SyscallRequestWrapper<T: SyscallRequest> {
-    pub gas_counter: Felt252,
+    pub gas_counter: u64,
     pub request: T,
 }
 impl<T: SyscallRequest> SyscallRequest for SyscallRequestWrapper<T> {
     fn read(vm: &VirtualMachine, ptr: &mut Relocatable) -> SyscallResult<Self> {
         let gas_counter = felt_from_ptr(vm, ptr)?;
+        let gas_counter =
+            gas_counter.to_u64().ok_or_else(|| SyscallExecutionError::InvalidSyscallInput {
+                input: felt_to_stark_felt(&gas_counter),
+                info: String::from("Unexpected gas."),
+            })?;
         let request = T::read(vm, ptr)?;
         Ok(Self { gas_counter, request })
     }
 }
 
 pub enum SyscallResponseWrapper<T: SyscallResponse> {
-    Success { gas_counter: Felt252, response: T },
-    Failure { gas_counter: Felt252, error_data: Vec<StarkFelt> },
+    Success { gas_counter: u64, response: T },
+    Failure { gas_counter: u64, error_data: Vec<StarkFelt> },
 }
 impl<T: SyscallResponse> SyscallResponse for SyscallResponseWrapper<T> {
     fn write(self, vm: &mut VirtualMachine, ptr: &mut Relocatable) -> WriteResponseResult {
         match self {
             Self::Success { gas_counter, response } => {
-                write_felt(vm, ptr, gas_counter)?;
+                write_felt(vm, ptr, Felt252::from(gas_counter))?;
                 // 0 to indicate success.
                 write_stark_felt(vm, ptr, StarkFelt::from(0_u8))?;
                 response.write(vm, ptr)
             }
             Self::Failure { gas_counter, error_data } => {
-                write_felt(vm, ptr, gas_counter)?;
+                write_felt(vm, ptr, Felt252::from(gas_counter))?;
                 // 1 to indicate failure.
                 write_stark_felt(vm, ptr, StarkFelt::from(1_u8))?;
 
@@ -149,7 +160,7 @@ pub fn call_contract(
     request: CallContractRequest,
     vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    remaining_gas: &mut Felt252,
+    remaining_gas: &mut u64,
 ) -> SyscallResult<CallContractResponse> {
     let storage_address = request.contract_address;
     let entry_point = CallEntryPoint {
@@ -161,7 +172,7 @@ pub fn call_contract(
         storage_address,
         caller_address: syscall_handler.storage_address(),
         call_type: CallType::Call,
-        initial_gas: remaining_gas.clone(),
+        initial_gas: *remaining_gas,
     };
     let retdata_segment = execute_inner_call(entry_point, vm, syscall_handler, remaining_gas)?;
 
@@ -189,7 +200,10 @@ impl SyscallRequest for DeployRequest {
             class_hash,
             contract_address_salt,
             constructor_calldata,
-            deploy_from_zero: felt_to_bool(deploy_from_zero)?,
+            deploy_from_zero: felt_to_bool(
+                deploy_from_zero,
+                "The deploy_from_zero field in the deploy system call must be 0 or 1.",
+            )?,
         })
     }
 }
@@ -211,7 +225,7 @@ pub fn deploy(
     request: DeployRequest,
     vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    remaining_gas: &mut Felt252,
+    remaining_gas: &mut u64,
 ) -> SyscallResult<DeployResponse> {
     let deployer_address = syscall_handler.storage_address();
     let deployer_address_for_calculation = match request.deploy_from_zero {
@@ -225,7 +239,6 @@ pub fn deploy(
         deployer_address_for_calculation,
     )?;
 
-    let initial_gas = constants::INITIAL_GAS_COST.into();
     let ctor_context = ConstructorContext {
         class_hash: request.class_hash,
         code_address: Some(deployed_contract_address),
@@ -238,12 +251,12 @@ pub fn deploy(
         syscall_handler.context,
         ctor_context,
         request.constructor_calldata,
-        initial_gas,
+        *remaining_gas,
     )?;
 
     let constructor_retdata =
         create_retdata_segment(vm, syscall_handler, &call_info.execution.retdata.0)?;
-    *remaining_gas -= stark_felt_to_felt(call_info.execution.gas_consumed);
+    update_remaining_gas(remaining_gas, &call_info);
 
     syscall_handler.inner_calls.push(call_info);
 
@@ -274,7 +287,7 @@ pub fn emit_event(
     request: EmitEventRequest,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<EmitEventResponse> {
     let execution_context = &mut syscall_handler.context;
     let ordered_event =
@@ -288,15 +301,20 @@ pub fn emit_event(
 // GetBlockHash syscall.
 
 #[derive(Debug, Eq, PartialEq)]
-
-// TODO(Arni, 8/6/2023): Consider replacing `BlockNumber`.
 pub struct GetBlockHashRequest {
-    pub block_number: StarkFelt,
+    pub block_number: BlockNumber,
 }
 
 impl SyscallRequest for GetBlockHashRequest {
     fn read(vm: &VirtualMachine, ptr: &mut Relocatable) -> SyscallResult<GetBlockHashRequest> {
-        let block_number = stark_felt_from_ptr(vm, ptr)?;
+        let felt = felt_from_ptr(vm, ptr)?;
+        let block_number = BlockNumber(felt.to_u64().ok_or_else(|| {
+            SyscallExecutionError::InvalidSyscallInput {
+                input: felt_to_stark_felt(&felt),
+                info: String::from("Block number must fit within 64 bits."),
+            }
+        })?);
+
         Ok(GetBlockHashRequest { block_number })
     }
 }
@@ -313,17 +331,28 @@ impl SyscallResponse for GetBlockHashResponse {
     }
 }
 
-// Returns the block hash of a given block_number.
-// Returns the expected block hash if the given block was created at least 10 blocks before the
-// current block. Otherwise, returns an error.
-// TODO(Arni, 11/6/2023): Implement according to the documentation above.
+/// Returns the block hash of a given block_number.
+/// Returns the expected block hash if the given block was created at least
+/// [constants::STORED_BLOCK_HASH_BUFFER] blocks before the current block. Otherwise, returns an
+/// error.
 pub fn get_block_hash(
     request: GetBlockHashRequest,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<GetBlockHashResponse> {
-    let key = StorageKey::try_from(request.block_number)?;
+    let requested_block_number = request.block_number.0;
+    let current_block_number = syscall_handler.context.block_context.block_number.0;
+
+    if current_block_number < constants::STORED_BLOCK_HASH_BUFFER
+        || requested_block_number > current_block_number - constants::STORED_BLOCK_HASH_BUFFER
+    {
+        let out_of_range_error = StarkFelt::try_from(BLOCK_NUMBER_OUT_OF_RANGE_ERROR)
+            .map_err(SyscallExecutionError::from)?;
+        return Err(SyscallExecutionError::SyscallError { error_data: vec![out_of_range_error] });
+    }
+
+    let key = StorageKey::try_from(StarkFelt::from(requested_block_number))?;
     let block_hash_contract_address =
         ContractAddress::try_from(StarkFelt::from(constants::BLOCK_HASH_CONTRACT_ADDRESS))?;
     let block_hash =
@@ -350,7 +379,7 @@ pub fn get_execution_info(
     _request: GetExecutionInfoRequest,
     vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<GetExecutionInfoResponse> {
     let execution_info_ptr = syscall_handler.get_or_allocate_execution_info_segment(vm)?;
 
@@ -381,7 +410,7 @@ pub fn library_call(
     request: LibraryCallRequest,
     vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    remaining_gas: &mut Felt252,
+    remaining_gas: &mut u64,
 ) -> SyscallResult<LibraryCallResponse> {
     let call_to_external = true;
     let retdata_segment = execute_library_call(
@@ -403,7 +432,7 @@ pub fn library_call_l1_handler(
     request: LibraryCallRequest,
     vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    remaining_gas: &mut Felt252,
+    remaining_gas: &mut u64,
 ) -> SyscallResult<LibraryCallResponse> {
     let call_to_external = false;
     let retdata_segment = execute_library_call(
@@ -440,7 +469,7 @@ pub fn replace_class(
     request: ReplaceClassRequest,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<ReplaceClassResponse> {
     // Ensure the class is declared (by reading it), and of type V1.
     let class_hash = request.class_hash;
@@ -482,7 +511,7 @@ pub fn send_message_to_l1(
     request: SendMessageToL1Request,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<SendMessageToL1Response> {
     let execution_context = &mut syscall_handler.context;
     let ordered_message_to_l1 = OrderedL2ToL1Message {
@@ -531,7 +560,7 @@ pub fn storage_read(
     request: StorageReadRequest,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<StorageReadResponse> {
     syscall_handler.get_contract_storage_at(request.address)
 }
@@ -563,7 +592,91 @@ pub fn storage_write(
     request: StorageWriteRequest,
     _vm: &mut VirtualMachine,
     syscall_handler: &mut SyscallHintProcessor<'_>,
-    _remaining_gas: &mut Felt252,
+    _remaining_gas: &mut u64,
 ) -> SyscallResult<StorageWriteResponse> {
     syscall_handler.set_contract_storage_at(request.address, request.value)
+}
+
+// Keccak syscall.
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct KeccakRequest {
+    pub input_start: Relocatable,
+    pub input_end: Relocatable,
+}
+
+impl SyscallRequest for KeccakRequest {
+    fn read(vm: &VirtualMachine, ptr: &mut Relocatable) -> SyscallResult<KeccakRequest> {
+        let input_start = vm.get_relocatable(*ptr)?;
+        *ptr = (*ptr + 1)?;
+        let input_end = vm.get_relocatable(*ptr)?;
+        *ptr = (*ptr + 1)?;
+        Ok(KeccakRequest { input_start, input_end })
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct KeccakResponse {
+    pub result_low: Felt252,
+    pub result_high: Felt252,
+}
+
+impl SyscallResponse for KeccakResponse {
+    fn write(self, vm: &mut VirtualMachine, ptr: &mut Relocatable) -> WriteResponseResult {
+        write_felt(vm, ptr, self.result_low)?;
+        write_felt(vm, ptr, self.result_high)?;
+        Ok(())
+    }
+}
+
+pub fn keccak(
+    request: KeccakRequest,
+    vm: &mut VirtualMachine,
+    syscall_handler: &mut SyscallHintProcessor<'_>,
+    remaining_gas: &mut u64,
+) -> SyscallResult<KeccakResponse> {
+    let input_length = (request.input_end - request.input_start)?;
+
+    const KECCAK_FULL_RATE_IN_WORDS: usize = 17;
+    let (n_rounds, remainder) = num_integer::div_rem(input_length, KECCAK_FULL_RATE_IN_WORDS);
+
+    if remainder != 0 {
+        return Err(SyscallExecutionError::SyscallError {
+            error_data: vec![
+                StarkFelt::try_from(INVALID_INPUT_LENGTH_ERROR)
+                    .map_err(SyscallExecutionError::from)?,
+            ],
+        });
+    }
+
+    let gas_cost = n_rounds as u64 * constants::KECCAK_ROUND_COST_GAS_COST;
+    if gas_cost > *remaining_gas {
+        let out_of_gas_error =
+            StarkFelt::try_from(OUT_OF_GAS_ERROR).map_err(SyscallExecutionError::from)?;
+
+        return Err(SyscallExecutionError::SyscallError { error_data: vec![out_of_gas_error] });
+    }
+    *remaining_gas -= gas_cost;
+
+    // For the keccak system call we want to count the number of rounds rather than the number of
+    // syscall invocations.
+    syscall_handler.increment_syscall_count_by(&SyscallSelector::Keccak, n_rounds);
+
+    let data = vm.get_integer_range(request.input_start, input_length)?;
+
+    let mut state = [0u64; 25];
+    for chunk in data.chunks(KECCAK_FULL_RATE_IN_WORDS) {
+        for (i, val) in chunk.iter().enumerate() {
+            state[i] ^= val.to_u64().ok_or_else(|| SyscallExecutionError::InvalidSyscallInput {
+                input: felt_to_stark_felt(val),
+                info: String::from("Invalid input for the keccak syscall."),
+            })?;
+        }
+        keccak::f1600(&mut state)
+    }
+
+    Ok(KeccakResponse {
+        result_low: (Felt252::from(state[1]) << 64u32) + Felt252::from(state[0]),
+        result_high: (Felt252::from(state[3]) << 64u32) + Felt252::from(state[2]),
+    })
 }

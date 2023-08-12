@@ -1,14 +1,22 @@
-use std::collections::{HashMap, HashSet};
+#[cfg(feature = "std")]
+use std::collections::hash_map::RandomState as HasherBuilder;
 
 use derive_more::IntoIterator;
+#[cfg(not(feature = "std"))]
+use hashbrown::hash_map::DefaultHashBuilder as HasherBuilder;
 use indexmap::IndexMap;
-use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce};
+use starknet_api::api_core::{ClassHash, CompiledClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 
+use crate::abi::abi_utils::get_erc20_balance_var_addresses;
 use crate::execution::contract_class::ContractClass;
 use crate::state::errors::StateError;
 use crate::state::state_api::{State, StateReader, StateResult};
+use crate::stdlib::cached::{Cached, SizedCache};
+use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::vec::Vec;
+use crate::sync::{Arc, Mutex, MutexGuard};
 use crate::utils::subtract_mappings;
 
 #[cfg(test)]
@@ -16,43 +24,51 @@ use crate::utils::subtract_mappings;
 mod test;
 
 pub type ContractClassMapping = HashMap<ClassHash, ContractClass>;
-pub type TransactionalState<'a, S> = CachedState<MutRefState<'a, CachedState<S>>>;
-
-/// Holds uncommitted changes induced on StarkNet contracts.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct CommitmentStateDiff {
-    // Contract instance attributes (per address).
-    pub address_to_class_hash: IndexMap<ContractAddress, ClassHash>,
-    pub address_to_nonce: IndexMap<ContractAddress, Nonce>,
-    pub storage_updates: IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt>>,
-
-    // Global attributes.
-    pub class_hash_to_compiled_class_hash: IndexMap<ClassHash, CompiledClassHash>,
-}
 
 /// Caches read and write requests.
 ///
 /// Writer functionality is builtin, whereas Reader functionality is injected through
 /// initialization.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CachedState<S: StateReader> {
     pub state: S,
     // Invariant: read/write access is managed by CachedState.
     cache: StateCache,
     class_hash_to_class: ContractClassMapping,
+    // Invariant: managed by CachedState.
+    global_class_hash_to_class: GlobalContractCache,
 }
 
 impl<S: StateReader> CachedState<S> {
-    pub fn new(state: S) -> Self {
-        Self { state, cache: StateCache::default(), class_hash_to_class: HashMap::default() }
+    pub fn new(state: S, global_class_hash_to_class: GlobalContractCache) -> Self {
+        Self {
+            state,
+            cache: StateCache::default(),
+            class_hash_to_class: HashMap::default(),
+            global_class_hash_to_class,
+        }
     }
 
-    /// Returns the number of storage changes done through this state.
-    /// Any change to the contract's state (storage, nonce, class hash) is considered.
-    // TODO(Noa, 30/04/23): Add nonce count.
-    pub fn count_actual_state_changes(&self) -> (usize, usize, usize) {
+    /// Creates a transactional instance from the given cached state.
+    /// It allows performing buffered modifying actions on the given state, which
+    /// will either all happen (will be committed) or none of them (will be discarded).
+    pub fn create_transactional(state: &mut CachedState<S>) -> TransactionalState<'_, S> {
+        let global_class_hash_to_class = state.global_class_hash_to_class.clone();
+        CachedState::new(MutRefState::new(state), global_class_hash_to_class)
+    }
+
+    /// Returns the storage changes done through this state.
+    /// For each contract instance (address) we have three attributes: (class hash, nonce, storage
+    /// root); the state updates correspond to them.
+    pub fn get_actual_state_changes_for_fee_charge(
+        &mut self,
+        fee_token_address: ContractAddress,
+        sender_address: Option<ContractAddress>,
+    ) -> StateResult<StateChanges> {
+        self.update_initial_values_of_write_only_access()?;
+
         // Storage Update.
-        let storage_updates = &self.cache.get_storage_updates();
+        let storage_updates = &mut self.cache.get_storage_updates();
         let mut modified_contracts: HashSet<ContractAddress> =
             storage_updates.keys().map(|address_key_pair| address_key_pair.0).collect();
 
@@ -60,7 +76,98 @@ impl<S: StateReader> CachedState<S> {
         let class_hash_updates = &self.cache.get_class_hash_updates();
         modified_contracts.extend(class_hash_updates.keys());
 
-        (storage_updates.len(), modified_contracts.len(), class_hash_updates.len())
+        // Nonce updates.
+        let nonce_updates = &self.cache.get_nonce_updates();
+        modified_contracts.extend(nonce_updates.keys());
+
+        // Compiled class hash updates (declare Cairo 1 contract).
+        let compiled_class_hash_updates = &self.cache.get_compiled_class_hash_updates();
+
+        // Calculated before executing fee transfer and therefore we add manually the fee transfer
+        // changes. Exclude the fee token contract modification, since it’s charged once throughout
+        // the block.
+        if let Some(sender_address) = sender_address {
+            let (sender_low_key, _sender_high_key) =
+                get_erc20_balance_var_addresses(&sender_address)?;
+            storage_updates.insert((fee_token_address, sender_low_key), StarkFelt::default());
+        }
+        modified_contracts.remove(&fee_token_address);
+
+        Ok(StateChanges {
+            storage_updates: storage_updates.clone(),
+            modified_contracts,
+            class_hash_updates: class_hash_updates.clone(),
+            compiled_class_hash_updates: compiled_class_hash_updates.clone(),
+        })
+    }
+
+    /// Updates cache with initial cell values for write-only access.
+    /// If written values match the original, the cell is unchanged and not counted as a
+    /// storage-change for fee calculation.
+    /// Same for class hash and nonce writes.
+    // TODO(Noa, 30/07/23): Consider adding DB getters in bulk (via a DB read transaction).
+    fn update_initial_values_of_write_only_access(&mut self) -> StateResult<()> {
+        // Eliminate storage writes that are identical to the initial value (no change). Assumes
+        // that `set_storage_at` does not affect the state field.
+        for contract_storage_key in self.cache.storage_writes.keys() {
+            if !self.cache.storage_initial_values.contains_key(contract_storage_key) {
+                // First access to this cell was write; cache initial value.
+                self.cache.storage_initial_values.insert(
+                    *contract_storage_key,
+                    self.state.get_storage_at(contract_storage_key.0, contract_storage_key.1)?,
+                );
+            }
+        }
+
+        for contract_address in self.cache.class_hash_writes.keys() {
+            if !self.cache.class_hash_initial_values.contains_key(contract_address) {
+                // First access to this cell was write; cache initial value.
+                self.cache
+                    .class_hash_initial_values
+                    .insert(*contract_address, self.state.get_class_hash_at(*contract_address)?);
+            }
+        }
+
+        for contract_address in self.cache.nonce_writes.keys() {
+            if !self.cache.nonce_initial_values.contains_key(contract_address) {
+                // First access to this cell was write; cache initial value.
+                self.cache
+                    .nonce_initial_values
+                    .insert(*contract_address, self.state.get_nonce_at(*contract_address)?);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Drains contract-class cache collected during execution and updates the global cache.
+    pub fn move_classes_to_global_cache(&mut self) {
+        let contract_class_updates: Vec<_> = self.class_hash_to_class.drain().collect();
+        for (key, value) in contract_class_updates {
+            self.global_class_hash_to_class().cache_set(key, value);
+        }
+    }
+
+    // Locks the Mutex and unwraps the MutexGuard, thus exposing the internal cache
+    // store. The Guard will panic only if the Mutex panics during the lock operation, but
+    // this shouldn't happen in our flow.
+    // Note: `&mut` is used since the LRU cache updates internal counters on reads.
+    pub fn global_class_hash_to_class(
+        &mut self,
+    ) -> MutexGuard<'_, SizedCache<ClassHash, ContractClass>> {
+        #[cfg(feature = "std")]
+        return self.global_class_hash_to_class.lock().expect("Global contract cache is poisoned.");
+        #[cfg(not(feature = "std"))]
+        return self
+            .global_class_hash_to_class
+            .try_lock()
+            .expect("Global contract cache is poisoned.");
+    }
+}
+
+impl<S: StateReader> From<S> for CachedState<S> {
+    fn from(state_reader: S) -> Self {
+        CachedState::new(state_reader, Default::default())
     }
 }
 
@@ -112,15 +219,27 @@ impl<S: StateReader> StateReader for CachedState<S> {
         class_hash: &ClassHash,
     ) -> StateResult<ContractClass> {
         if !self.class_hash_to_class.contains_key(class_hash) {
-            let contract_class = self.state.get_compiled_contract_class(class_hash)?;
-            self.class_hash_to_class.insert(*class_hash, contract_class);
+            let contract_class = self.global_class_hash_to_class().cache_get(class_hash).cloned();
+
+            match contract_class {
+                Some(contract_class_from_global_cache) => {
+                    self.class_hash_to_class.insert(*class_hash, contract_class_from_global_cache);
+                }
+                None => {
+                    let contract_class_from_db =
+                        self.state.get_compiled_contract_class(class_hash)?;
+                    self.class_hash_to_class.insert(*class_hash, contract_class_from_db);
+                }
+            }
         }
 
         let contract_class = self
             .class_hash_to_class
             .get(class_hash)
+            .cloned()
             .expect("The class hash must appear in the cache.");
-        Ok(contract_class.clone())
+
+        Ok(contract_class)
     }
 
     fn get_compiled_class_hash(&mut self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
@@ -188,8 +307,13 @@ impl<S: StateReader> State for CachedState<S> {
         Ok(())
     }
 
+    // Assumes calling to `count_actual_state_changes` before. See its documentation.
     fn to_state_diff(&self) -> CommitmentStateDiff {
-        type StorageDiff = IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt>>;
+        type StorageDiff = IndexMap<
+            ContractAddress,
+            IndexMap<StorageKey, StarkFelt, HasherBuilder>,
+            HasherBuilder,
+        >;
 
         let state_cache = &self.cache;
         let class_hash_updates = state_cache.get_class_hash_updates();
@@ -207,22 +331,36 @@ impl<S: StateReader> State for CachedState<S> {
     }
 }
 
+#[cfg(any(test))]
+impl Default for CachedState<crate::test_utils::DictStateReader> {
+    fn default() -> Self {
+        Self {
+            state: Default::default(),
+            cache: Default::default(),
+            class_hash_to_class: Default::default(),
+            global_class_hash_to_class: Default::default(),
+        }
+    }
+}
+
 pub type ContractStorageKey = (ContractAddress, StorageKey);
 
 #[derive(IntoIterator, Debug, Default)]
 pub struct StorageView(pub HashMap<ContractStorageKey, StarkFelt>);
 
 /// Converts a `CachedState`'s storage mapping into a `StateDiff`'s storage mapping.
-impl From<StorageView> for IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt>> {
+impl From<StorageView>
+    for IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt, HasherBuilder>, HasherBuilder>
+{
     fn from(storage_view: StorageView) -> Self {
-        let mut storage_updates = Self::new();
+        let mut storage_updates = Self::with_capacity_and_hasher(0, HasherBuilder::default());
         for ((address, key), value) in storage_view.into_iter() {
             storage_updates
                 .entry(address)
                 .and_modify(|map| {
                     map.insert(key, value);
                 })
-                .or_insert_with(|| IndexMap::from([(key, value)]));
+                .or_insert_with(|| IndexMap::from_iter([(key, value)]));
         }
 
         storage_updates
@@ -341,6 +479,17 @@ impl StateCache {
     fn get_class_hash_updates(&self) -> HashMap<ContractAddress, ClassHash> {
         subtract_mappings(&self.class_hash_writes, &self.class_hash_initial_values)
     }
+
+    fn get_nonce_updates(&self) -> HashMap<ContractAddress, Nonce> {
+        subtract_mappings(&self.nonce_writes, &self.nonce_initial_values)
+    }
+
+    fn get_compiled_class_hash_updates(&self) -> HashMap<ClassHash, CompiledClassHash> {
+        subtract_mappings(
+            &self.compiled_class_hash_writes,
+            &self.compiled_class_hash_initial_values,
+        )
+    }
 }
 
 /// Wraps a mutable reference to a `State` object, exposing its API.
@@ -426,6 +575,8 @@ impl<'a, S: State + ?Sized> State for MutRefState<'a, S> {
     }
 }
 
+pub type TransactionalState<'a, S> = CachedState<MutRefState<'a, CachedState<S>>>;
+
 /// Adds the ability to perform a transactional execution.
 impl<'a, S: StateReader> TransactionalState<'a, S> {
     /// Commits changes in the child (wrapping) state to its parent.
@@ -438,8 +589,87 @@ impl<'a, S: StateReader> TransactionalState<'a, S> {
         parent_cache.storage_writes.extend(child_cache.storage_writes);
         parent_cache.compiled_class_hash_writes.extend(child_cache.compiled_class_hash_writes);
         self.state.0.class_hash_to_class.extend(self.class_hash_to_class);
+        self.state.0.global_class_hash_to_class = self.global_class_hash_to_class;
     }
 
     /// Drops `self`.
     pub fn abort(self) {}
+}
+
+/// Holds uncommitted changes induced on StarkNet contracts.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CommitmentStateDiff {
+    // Contract instance attributes (per address).
+    pub address_to_class_hash: IndexMap<ContractAddress, ClassHash, HasherBuilder>,
+    pub address_to_nonce: IndexMap<ContractAddress, Nonce, HasherBuilder>,
+    pub storage_updates:
+        IndexMap<ContractAddress, IndexMap<StorageKey, StarkFelt, HasherBuilder>, HasherBuilder>,
+
+    // Global attributes.
+    pub class_hash_to_compiled_class_hash: IndexMap<ClassHash, CompiledClassHash, HasherBuilder>,
+}
+
+/// Holds the state changes.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct StateChanges {
+    pub storage_updates: HashMap<(ContractAddress, StorageKey), StarkFelt>,
+    pub class_hash_updates: HashMap<ContractAddress, ClassHash>,
+    pub compiled_class_hash_updates: HashMap<ClassHash, CompiledClassHash>,
+    pub modified_contracts: HashSet<ContractAddress>,
+}
+
+impl StateChanges {
+    /// Merges the given state changes into a single one. Note that the order of the state changes
+    /// is important. The state changes are merged in the order they appear in the given vector.
+    pub fn merge(state_changes: Vec<Self>) -> Self {
+        let mut merged_state_changes = Self::default();
+        for state_change in state_changes {
+            merged_state_changes.storage_updates.extend(state_change.storage_updates);
+            merged_state_changes.class_hash_updates.extend(state_change.class_hash_updates);
+            merged_state_changes
+                .compiled_class_hash_updates
+                .extend(state_change.compiled_class_hash_updates);
+            merged_state_changes.modified_contracts.extend(state_change.modified_contracts);
+        }
+
+        merged_state_changes
+    }
+}
+
+/// Holds the number of state changes.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct StateChangesCount {
+    pub n_storage_updates: usize,
+    pub n_class_hash_updates: usize,
+    pub n_compiled_class_hash_updates: usize,
+    pub n_modified_contracts: usize,
+}
+
+impl From<&StateChanges> for StateChangesCount {
+    fn from(state_changes: &StateChanges) -> Self {
+        Self {
+            n_storage_updates: state_changes.storage_updates.len(),
+            n_class_hash_updates: state_changes.class_hash_updates.len(),
+            n_compiled_class_hash_updates: state_changes.compiled_class_hash_updates.len(),
+            n_modified_contracts: state_changes.modified_contracts.len(),
+        }
+    }
+}
+
+// Note: `ContractClassLRUCache` key-value types must align with `ContractClassMapping`.
+type ContractClassLRUCache = SizedCache<ClassHash, ContractClass>;
+#[derive(Debug, Clone, derive_more::Deref, derive_more::DerefMut)]
+// Thread-safe LRU cache for contract classes, optimized for inter-language sharing when
+// `blockifier` compiles as a shared library.
+pub struct GlobalContractCache(pub Arc<Mutex<ContractClassLRUCache>>);
+
+impl GlobalContractCache {
+    // TODO: make this configurable via a CachedState constructor argument.
+    const CACHE_SIZE: usize = 100;
+}
+
+impl Default for GlobalContractCache {
+    fn default() -> Self {
+        Self(Arc::new(Mutex::new(ContractClassLRUCache::with_size(Self::CACHE_SIZE))))
+    }
 }

@@ -1,11 +1,14 @@
-use starknet_api::core::{ClassHash, ContractAddress, Nonce};
+use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{Fee, TransactionVersion};
 use starknet_api::StarknetApiError;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
+use crate::execution::entry_point::Retdata;
 use crate::execution::errors::EntryPointExecutionError;
 use crate::state::errors::StateError;
+use crate::stdlib::string::String;
+use crate::stdlib::vec::Vec;
 
 #[derive(Debug, Error)]
 pub enum TransactionExecutionError {
@@ -34,22 +37,29 @@ pub enum TransactionExecutionError {
     )]
     InvalidNonce { address: ContractAddress, expected_nonce: Nonce, actual_nonce: Nonce },
     #[error(
+        "Invalid order number for {object}. Order: {order} exceeds the maximum order limit: \
+         {max_order}."
+    )]
+    InvalidOrder { object: String, order: usize, max_order: usize },
+    #[error("The `validate` entry point should return `VALID`. Got {actual:?}.")]
+    InvalidValidateReturnData { actual: Retdata },
+    #[error(
         "Transaction version {version:?} is not supported. Supported versions: \
          {allowed_versions:?}."
     )]
     InvalidVersion { version: TransactionVersion, allowed_versions: Vec<TransactionVersion> },
     #[error("Max fee ({max_fee:?}) exceeds balance (Uint256({balance_low:?}, {balance_high:?})).")]
     MaxFeeExceedsBalance { max_fee: Fee, balance_low: StarkFelt, balance_high: StarkFelt },
+    #[error("Max fee ({max_fee:?}) is too low. Minimum fee: {min_fee:?}.")]
+    MaxFeeTooLow { min_fee: Fee, max_fee: Fee },
     #[error(transparent)]
     StarknetApiError(#[from] StarknetApiError),
     #[error(transparent)]
     StateError(#[from] StateError),
     #[error("Calling other contracts during '{entry_point_kind}' execution is forbidden.")]
     UnauthorizedInnerCall { entry_point_kind: String },
-    #[error("Unexpected holes in the {object} order. Two objects with the same order: {order}.")]
+    #[error("Unexpected holes in the {object} order. No object with the order: {order}.")]
     UnexpectedHoles { object: String, order: usize },
-    #[error("Unknown chain ID '{chain_id:?}'.")]
-    UnknownChainId { chain_id: String },
     #[error("Transaction validation has failed.")]
     ValidateTransactionError(#[source] EntryPointExecutionError),
 }

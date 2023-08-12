@@ -1,4 +1,5 @@
 use cairo_felt::Felt252;
+use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
@@ -6,8 +7,8 @@ use cairo_vm::vm::runners::cairo_runner::{
     CairoArg, CairoRunner, ExecutionResources as VmExecutionResources,
 };
 use cairo_vm::vm::vm_core::VirtualMachine;
+use num_traits::ToPrimitive;
 use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
 
 use crate::execution::contract_class::{ContractClassV1, EntryPointV1};
 use crate::execution::entry_point::{
@@ -18,11 +19,13 @@ use crate::execution::errors::{
     EntryPointExecutionError, PostExecutionError, PreExecutionError, VirtualMachineExecutionError,
 };
 use crate::execution::execution_utils::{
-    felt_to_stark_felt, read_execution_retdata, stark_felt_to_felt, write_maybe_relocatable,
-    write_stark_felt, Args, ReadOnlySegments,
+    read_execution_retdata, stark_felt_to_felt, write_maybe_relocatable, write_stark_felt, Args,
+    ReadOnlySegments,
 };
 use crate::execution::syscalls::hint_processor::SyscallHintProcessor;
 use crate::state::state_api::State;
+use crate::stdlib::string::ToString;
+use crate::stdlib::vec::Vec;
 
 // TODO(spapini): Try to refactor this file into a StarknetRunner struct.
 
@@ -32,13 +35,14 @@ pub struct VmExecutionContext<'a> {
     pub syscall_handler: SyscallHintProcessor<'a>,
     pub initial_syscall_ptr: Relocatable,
     pub entry_point: EntryPointV1,
-    pub program_segment_size: usize,
+    // Additional data required for execution is appended after the program bytecode.
+    pub program_extra_data_length: usize,
 }
 
 pub struct CallResult {
     pub failed: bool,
     pub retdata: Retdata,
-    pub gas_consumed: StarkFelt,
+    pub gas_consumed: u64,
 }
 
 /// Executes a specific call to a contract entry point and returns its output.
@@ -55,7 +59,7 @@ pub fn execute_entry_point_call(
         mut syscall_handler,
         initial_syscall_ptr,
         entry_point,
-        program_segment_size,
+        program_extra_data_length,
     } = initialize_execution_context(call, &contract_class, state, resources, context)?;
 
     let args = prepare_call_arguments(
@@ -71,6 +75,7 @@ pub fn execute_entry_point_call(
     let previous_vm_resources = syscall_handler.resources.vm_resources.clone();
 
     // Execute.
+    let program_segment_size = contract_class.bytecode_length() + program_extra_data_length;
     run_entry_point(
         &mut vm,
         &mut runner,
@@ -80,8 +85,14 @@ pub fn execute_entry_point_call(
         program_segment_size,
     )?;
 
-    let call_info =
-        finalize_execution(vm, runner, syscall_handler, previous_vm_resources, n_total_args)?;
+    let call_info = finalize_execution(
+        vm,
+        runner,
+        syscall_handler,
+        previous_vm_resources,
+        n_total_args,
+        program_extra_data_length,
+    )?;
     if call_info.execution.failed {
         return Err(EntryPointExecutionError::ExecutionFailed {
             error_data: call_info.execution.retdata.0,
@@ -104,14 +115,24 @@ pub fn initialize_execution_context<'a>(
     let proof_mode = false;
     let mut runner = CairoRunner::new(&contract_class.0.program, "starknet", proof_mode)?;
 
-    let trace_enabled = true;
+    let trace_enabled = false;
     let mut vm = VirtualMachine::new(trace_enabled);
 
-    runner.initialize_builtins(&mut vm)?;
-    runner.initialize_segments(&mut vm, None);
+    // Initialize program with all builtins.
+    let program_builtins = [
+        BuiltinName::bitwise,
+        BuiltinName::ec_op,
+        BuiltinName::ecdsa,
+        BuiltinName::output,
+        BuiltinName::pedersen,
+        BuiltinName::poseidon,
+        BuiltinName::range_check,
+        BuiltinName::segment_arena,
+    ];
+    runner.initialize_function_runner_cairo_1(&mut vm, &program_builtins)?;
     let mut read_only_segments = ReadOnlySegments::default();
-    let program_segment_size =
-        prepare_builtin_costs(&mut vm, contract_class, &mut read_only_segments)?;
+    let program_extra_data_length =
+        prepare_program_extra_data(&mut vm, contract_class, &mut read_only_segments)?;
 
     // Instantiate syscall handler.
     let initial_syscall_ptr = vm.add_memory_segment();
@@ -131,11 +152,11 @@ pub fn initialize_execution_context<'a>(
         syscall_handler,
         initial_syscall_ptr,
         entry_point,
-        program_segment_size,
+        program_extra_data_length,
     })
 }
 
-fn prepare_builtin_costs(
+fn prepare_program_extra_data(
     vm: &mut VirtualMachine,
     contract_class: &ContractClassV1,
     read_only_segments: &mut ReadOnlySegments,
@@ -153,11 +174,12 @@ fn prepare_builtin_costs(
     // additional `ret` statement).
     let mut ptr = (vm.get_pc() + contract_class.bytecode_length())?;
     // Push a `ret` opcode.
-    write_stark_felt(vm, &mut ptr, stark_felt!("0x208b7fff7fff7ffe"))?;
+    write_stark_felt(vm, &mut ptr, StarkFelt::try_from("0x208b7fff7fff7ffe").unwrap())?;
     // Push a pointer to the builtin cost segment.
     write_maybe_relocatable(vm, &mut ptr, builtin_cost_segment_start)?;
 
-    Ok(contract_class.bytecode_length() + 2)
+    let program_extra_data_length = 2;
+    Ok(program_extra_data_length)
 }
 
 pub fn prepare_call_arguments(
@@ -195,7 +217,7 @@ pub fn prepare_call_arguments(
         return Err(PreExecutionError::InvalidBuiltin(builtin_name.clone()));
     }
     // Push gas counter.
-    args.push(CairoArg::Single(MaybeRelocatable::from(&call.initial_gas)));
+    args.push(CairoArg::Single(MaybeRelocatable::from(Felt252::from(call.initial_gas))));
     // Push syscall ptr.
     args.push(CairoArg::Single(MaybeRelocatable::from(initial_syscall_ptr)));
 
@@ -220,21 +242,18 @@ pub fn run_entry_point(
     args: Args,
     program_segment_size: usize,
 ) -> Result<(), VirtualMachineExecutionError> {
-    // TODO(Dori,30/06/2023): propagate properly once VM allows it.
-    let run_resources = &mut None;
     let verify_secure = true;
     let args: Vec<&CairoArg> = args.iter().collect();
-    runner.run_from_entrypoint(
+    let result = runner.run_from_entrypoint(
         entry_point.pc(),
         &args,
-        run_resources,
         verify_secure,
         Some(program_segment_size),
         vm,
         hint_processor,
-    )?;
+    );
 
-    Ok(())
+    Ok(result?)
 }
 
 pub fn finalize_execution(
@@ -243,11 +262,18 @@ pub fn finalize_execution(
     syscall_handler: SyscallHintProcessor<'_>,
     previous_vm_resources: VmExecutionResources,
     n_total_args: usize,
+    program_extra_data_length: usize,
 ) -> Result<CallInfo, PostExecutionError> {
     // Close memory holes in segments (OS code touches those memory cells, we simulate it).
+    let program_start_ptr = runner
+        .program_base
+        .expect("The `program_base` field should be initialized after running the entry point.");
+    let program_end_ptr = (program_start_ptr + runner.get_program().data_len())?;
+    vm.mark_address_range_as_accessed(program_end_ptr, program_extra_data_length)?;
+
     let initial_fp = runner
         .get_initial_fp()
-        .expect("The initial_fp field should be initialized after running the entry point.");
+        .expect("The `initial_fp` field should be initialized after running the entry point.");
     // When execution starts the stack holds the EP arguments + [ret_fp, ret_pc].
     let args_ptr = (initial_fp - (n_total_args + 2))?;
     vm.mark_address_range_as_accessed(args_ptr, n_total_args)?;
@@ -304,22 +330,25 @@ fn get_call_result(
     // TODO(spapini): Validate implicits.
 
     let gas = &return_result[0];
-    let MaybeRelocatable::Int(gas) = gas
-    else {
-        return
-        Err(PostExecutionError::MalformedReturnData {
-            error_message: "Error extracting return data.".to_string()});
+    let MaybeRelocatable::Int(gas) = gas else {
+        return Err(PostExecutionError::MalformedReturnData {
+            error_message: "Error extracting return data.".to_string(),
+        });
     };
-    if gas < &Felt252::from(0) || gas > &syscall_handler.call.initial_gas {
+    let gas = gas.to_u64().ok_or(PostExecutionError::MalformedReturnData {
+        error_message: format!("Unexpected remaining gas: {gas}."),
+    })?;
+
+    if gas > syscall_handler.call.initial_gas {
         return Err(PostExecutionError::MalformedReturnData {
             error_message: format!("Unexpected remaining gas: {gas}."),
         });
     }
 
-    let gas_consumed = &syscall_handler.call.initial_gas - gas;
+    let gas_consumed = syscall_handler.call.initial_gas - gas;
     Ok(CallResult {
         failed,
         retdata: read_execution_retdata(vm, retdata_size, retdata_start)?,
-        gas_consumed: felt_to_stark_felt(&gas_consumed),
+        gas_consumed,
     })
 }

@@ -1,8 +1,7 @@
-use std::collections::HashSet;
-
+use cairo_vm::serde::deserialize_program::BuiltinName;
 use num_bigint::BigInt;
 use pretty_assertions::assert_eq;
-use starknet_api::core::{EntryPointSelector, PatriciaKey};
+use starknet_api::api_core::{EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
@@ -13,6 +12,8 @@ use crate::execution::entry_point::{CallEntryPoint, CallExecution, CallInfo, Ret
 use crate::execution::errors::EntryPointExecutionError;
 use crate::retdata;
 use crate::state::cached_state::CachedState;
+use crate::stdlib::collections::HashSet;
+use crate::stdlib::string::ToString;
 use crate::test_utils::{
     create_test_state, deprecated_create_test_state, pad_address_to_64,
     trivial_external_entry_point, trivial_external_entry_point_security_test, DictStateReader,
@@ -493,7 +494,14 @@ fn test_cairo1_entry_point_segment_arena() {
         ..trivial_external_entry_point()
     };
 
-    entry_point_call.execute_directly(&mut state).unwrap();
+    assert!(
+        entry_point_call
+            .execute_directly(&mut state)
+            .unwrap()
+            .vm_resources
+            .builtin_instance_counter
+            .contains_key(BuiltinName::segment_arena.name())
+    );
 }
 
 #[test]
@@ -518,18 +526,18 @@ fn test_stack_trace() {
     };
     let expected_trace = format!(
         "Error in the called contract ({}):
-Error at pc=0:19:
+Error at pc=0:34:
 Got an exception while executing a hint.
 Cairo traceback (most recent call last):
-Unknown location (pc=0:658)
-Unknown location (pc=0:641)
+Unknown location (pc=0:680)
+Unknown location (pc=0:663)
 
 Error in the called contract ({}):
-Error at pc=0:19:
+Error at pc=0:34:
 Got an exception while executing a hint.
 Cairo traceback (most recent call last):
-Unknown location (pc=0:658)
-Unknown location (pc=0:641)
+Unknown location (pc=0:680)
+Unknown location (pc=0:663)
 
 Error in the called contract ({}):
 Error at pc=0:58:

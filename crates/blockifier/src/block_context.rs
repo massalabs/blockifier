@@ -1,7 +1,9 @@
-use std::collections::HashMap;
-
+use starknet_api::api_core::{ChainId, ContractAddress};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::{ChainId, ContractAddress};
+
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::String;
+use crate::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct BlockContext {
@@ -12,10 +14,11 @@ pub struct BlockContext {
     // Fee-related.
     pub sequencer_address: ContractAddress,
     pub fee_token_address: ContractAddress,
-    pub vm_resource_fee_cost: HashMap<String, f64>,
+    pub vm_resource_fee_cost: Arc<HashMap<String, f64>>,
     pub gas_price: u128, // In wei.
 
     // Limits.
     pub invoke_tx_max_n_steps: u32,
     pub validate_max_n_steps: u32,
+    pub max_recursion_depth: usize,
 }

@@ -8,9 +8,13 @@ from starkware.starknet.common.syscalls import (
     library_call,
     deploy,
     call_contract,
+    get_caller_address,
     replace_class,
 )
 from starkware.starknet.core.os.contract_address.contract_address import get_contract_address
+
+// selector_from_name('transferFrom').
+const TRANSFER_FROM_SELECTOR = 0x0041b033f4a31df8067c24d1e9b550a2ce75fd4a29e1147af9752174f0e6cb20;
 
 @storage_var
 func number_map(key: felt) -> (value: felt) {
@@ -194,4 +198,56 @@ func test_contract_address{pedersen_ptr: HashBuiltin*, range_check_ptr}(
 @external
 func foo() {
     return ();
+}
+
+@external
+func recursive_fail(depth: felt) {
+    if (depth == 0) {
+        assert 0 = 1;
+        return ();
+    }
+    recursive_fail(depth - 1);
+    return ();
+}
+
+@external
+func recurse(depth: felt) {
+    if (depth == 0) {
+        return ();
+    }
+    recurse(depth - 1);
+    return ();
+}
+
+@external
+func recursive_syscall{syscall_ptr: felt*}(contract_address: felt, function_selector: felt, depth: felt) {
+    alloc_locals;
+    if (depth == 0) {
+        return ();
+    }
+    local calldata: felt* = new(contract_address, function_selector, depth - 1);
+    call_contract(
+        contract_address=contract_address,
+        function_selector=function_selector,
+        calldata_size=3,
+        calldata=calldata,
+    );
+    return ();
+}
+
+@external
+func test_write_and_transfer{syscall_ptr: felt*}(
+    key: felt, value: felt, to: felt, amount: felt, fee_token_address: felt
+) -> (retdata_len: felt, retdata: felt*) {
+    alloc_locals;
+    storage_write(address=key, value=value);
+    let caller = get_caller_address();
+    local calldata: felt* = new(caller, to, amount, 0);
+    let (retdata_len: felt, retdata: felt*) = call_contract(
+        contract_address=fee_token_address,
+        function_selector=TRANSFER_FROM_SELECTOR,
+        calldata_size=4,
+        calldata=calldata,
+    );
+    return (retdata_len=retdata_len, retdata=retdata);
 }

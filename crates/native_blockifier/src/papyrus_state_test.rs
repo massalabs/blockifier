@@ -5,46 +5,40 @@ use blockifier::state::cached_state::CachedState;
 use blockifier::state::state_api::StateReader;
 use blockifier::test_utils::{
     get_deprecated_contract_class, trivial_external_entry_point, TEST_CLASS_HASH,
-    TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH,
+    TEST_CONTRACT_ADDRESS, TEST_CONTRACT_CAIRO0_PATH,
 };
 use indexmap::IndexMap;
 use papyrus_storage::state::{StateStorageReader, StateStorageWriter};
+use starknet_api::api_core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::block::BlockNumber;
-use starknet_api::core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::{StateDiff, StorageKey};
 use starknet_api::transaction::Calldata;
-use starknet_api::{calldata, patricia_key, stark_felt};
+use starknet_api::{calldata, class_hash, contract_address, patricia_key, stark_felt};
 
-use crate::papyrus_state::{PapyrusReader, PapyrusStateReader};
+use crate::papyrus_state::PapyrusReader;
 
 #[test]
 fn test_entry_point_with_papyrus_state() -> papyrus_storage::StorageResult<()> {
-    let (storage_reader, mut storage_writer) = papyrus_storage::test_utils::get_test_storage();
+    let ((storage_reader, mut storage_writer), _) = papyrus_storage::test_utils::get_test_storage();
 
     // Initialize Storage: add test contract and class.
-    let deployed_contracts = IndexMap::from([(
-        ContractAddress(patricia_key!(TEST_CONTRACT_ADDRESS)),
-        ClassHash(stark_felt!(TEST_CLASS_HASH)),
-    )]);
+    let deployed_contracts =
+        IndexMap::from([(contract_address!(TEST_CONTRACT_ADDRESS), class_hash!(TEST_CLASS_HASH))]);
     let state_diff = StateDiff { deployed_contracts, ..Default::default() };
 
-    let test_contract = get_deprecated_contract_class(TEST_CONTRACT_PATH);
+    let test_contract = get_deprecated_contract_class(TEST_CONTRACT_CAIRO0_PATH);
     let deprecated_declared_classes =
-        IndexMap::from([(ClassHash(stark_felt!(TEST_CLASS_HASH)), test_contract)]);
+        IndexMap::from([(class_hash!(TEST_CLASS_HASH), test_contract)]);
     storage_writer
         .begin_rw_txn()?
         .append_state_diff(BlockNumber::default(), state_diff, deprecated_declared_classes)?
         .commit()?;
 
-    let storage_tx = storage_reader.begin_ro_txn()?;
-    let state_reader = storage_tx.get_state_reader()?;
-
     // BlockNumber is 1 due to the initialization step above.
     let block_number = BlockNumber(1);
-    let state_reader = PapyrusStateReader::new(state_reader, block_number);
-    let papyrus_reader = PapyrusReader::new(&storage_tx, state_reader);
-    let mut state = CachedState::new(papyrus_reader);
+    let papyrus_reader = PapyrusReader::new(storage_reader, block_number);
+    let mut state = CachedState::from(papyrus_reader);
 
     // Call entrypoint that want to write to storage, which updates the cached state's write cache.
     let key = stark_felt!(1234_u16);

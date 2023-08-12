@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use cairo_felt::Felt252;
-use cairo_lang_runner::short_string::as_cairo_short_string;
+use cairo_lang_utils::short_string::as_cairo_short_string;
 use cairo_vm::serde::deserialize_program::{
     deserialize_array_of_bigint_hex, Attribute, HintParams, Identifier, ReferenceManager,
 };
@@ -12,7 +10,8 @@ use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::vm::runners::cairo_runner::CairoArg;
 use cairo_vm::vm::vm_core::VirtualMachine;
-use starknet_api::core::ClassHash;
+use num_bigint::BigUint;
+use starknet_api::api_core::ClassHash;
 use starknet_api::deprecated_contract_class::Program as DeprecatedProgram;
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::Calldata;
@@ -26,6 +25,10 @@ use crate::execution::errors::PostExecutionError;
 use crate::execution::{cairo1_execution, deprecated_execution};
 use crate::state::errors::StateError;
 use crate::state::state_api::State;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 pub type Args = Vec<CairoArg>;
 
@@ -96,8 +99,28 @@ pub fn felt_from_ptr(
     ptr: &mut Relocatable,
 ) -> Result<Felt252, VirtualMachineError> {
     let felt = vm.get_integer(*ptr)?.into_owned();
-    *ptr += 1;
+    *ptr = (*ptr + 1)?;
     Ok(felt)
+}
+
+pub fn u256_from_ptr(
+    vm: &VirtualMachine,
+    ptr: &mut Relocatable,
+) -> Result<BigUint, VirtualMachineError> {
+    let low = vm.get_integer(*ptr)?;
+    *ptr = (*ptr + 1)?;
+    let high = vm.get_integer(*ptr)?;
+    *ptr = (*ptr + 1)?;
+    Ok((high.to_biguint() << 128) + low.to_biguint())
+}
+
+pub fn write_u256(
+    vm: &mut VirtualMachine,
+    ptr: &mut Relocatable,
+    value: BigUint,
+) -> Result<(), MemoryError> {
+    write_felt(vm, ptr, Felt252::from(&value & BigUint::from(u128::MAX)))?;
+    write_felt(vm, ptr, Felt252::from(value >> 128))
 }
 
 pub fn felt_range_from_ptr(
@@ -199,7 +222,7 @@ pub fn execute_deployment(
     context: &mut EntryPointExecutionContext,
     ctor_context: ConstructorContext,
     constructor_calldata: Calldata,
-    remaining_gas: Felt252,
+    remaining_gas: u64,
 ) -> EntryPointExecutionResult<CallInfo> {
     // Address allocation in the state is done before calling the constructor, so that it is
     // visible from it.
@@ -245,7 +268,7 @@ pub fn write_maybe_relocatable<T: Into<MaybeRelocatable>>(
     value: T,
 ) -> Result<(), MemoryError> {
     vm.insert_value(*ptr, value)?;
-    *ptr += 1;
+    *ptr = (*ptr + 1)?;
     Ok(())
 }
 

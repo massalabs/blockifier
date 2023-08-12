@@ -4,30 +4,37 @@ use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::runner_errors::RunnerError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use num_bigint::{BigInt, TryFromBigIntError};
-use starknet_api::core::{ContractAddress, EntryPointSelector};
+use starknet_api::api_core::{ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 use crate::execution::execution_utils::felts_as_str;
 use crate::state::errors::StateError;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 // TODO(AlonH, 21/12/2022): Implement Display for all types that appear in errors.
 
 #[derive(Debug, Error)]
 pub enum PreExecutionError {
-    #[error("Entry point {0:?} not found in contract.")]
-    EntryPointNotFound(EntryPointSelector),
     #[error("Entry point {selector:?} of type {typ:?} is not unique.")]
     DuplicatedEntryPointSelector { selector: EntryPointSelector, typ: EntryPointType },
+    #[error("Entry point {0:?} not found in contract.")]
+    EntryPointNotFound(EntryPointSelector),
+    #[error("Fraud attempt blocked.")]
+    FraudAttempt,
     #[error("Invalid builtin {0:?}.")]
     InvalidBuiltin(String),
-    #[error("No entry points of type {0:?} found in contract.")]
-    NoEntryPointOfTypeFound(EntryPointType),
+    #[error("The constructor entry point must be named 'constructor'.")]
+    InvalidConstructorEntryPointName,
     #[error(transparent)]
     MathError(#[from] MathError),
     #[error(transparent)]
     MemoryError(#[from] MemoryError),
+    #[error("No entry points of type {0:?} found in contract.")]
+    NoEntryPointOfTypeFound(EntryPointType),
     #[error(transparent)]
     ProgramError(#[from] cairo_vm::types::errors::program_errors::ProgramError),
     #[error(transparent)]
@@ -126,6 +133,8 @@ pub enum EntryPointExecutionError {
     PostExecutionError(#[from] PostExecutionError),
     #[error(transparent)]
     PreExecutionError(#[from] PreExecutionError),
+    #[error("Execution failed due to recursion depth exceeded.")]
+    RecursionDepthExceeded,
     #[error(transparent)]
     StateError(#[from] StateError),
     /// Gathers all errors from running the Cairo VM, excluding hints.

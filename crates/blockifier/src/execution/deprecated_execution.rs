@@ -4,10 +4,12 @@ use cairo_vm::vm::runners::cairo_runner::{
     CairoArg, CairoRunner, ExecutionResources as VmExecutionResources,
 };
 use cairo_vm::vm::vm_core::VirtualMachine;
-use starknet_api::core::EntryPointSelector;
-use starknet_api::hash::{StarkFelt, StarkHash};
+use starknet_api::api_core::EntryPointSelector;
+use starknet_api::deprecated_contract_class::EntryPointType;
+use starknet_api::hash::StarkHash;
 
-use crate::abi::constants::DEFAULT_ENTRY_POINT_SELECTOR;
+use crate::abi::abi_utils::selector_from_name;
+use crate::abi::constants::{CONSTRUCTOR_ENTRY_POINT_NAME, DEFAULT_ENTRY_POINT_SELECTOR};
 use crate::execution::contract_class::ContractClassV0;
 use crate::execution::deprecated_syscalls::hint_processor::DeprecatedSyscallHintProcessor;
 use crate::execution::entry_point::{
@@ -21,6 +23,8 @@ use crate::execution::execution_utils::{
     read_execution_retdata, stark_felt_to_felt, Args, ReadOnlySegments,
 };
 use crate::state::state_api::State;
+use crate::stdlib::string::ToString;
+use crate::stdlib::vec::Vec;
 
 pub struct VmExecutionContext<'a> {
     pub runner: CairoRunner,
@@ -85,7 +89,7 @@ pub fn initialize_execution_context<'a>(
     let proof_mode = false;
     let mut runner = CairoRunner::new(&contract_class.program, "starknet", proof_mode)?;
 
-    let trace_enabled = true;
+    let trace_enabled = false;
     let mut vm = VirtualMachine::new(trace_enabled);
 
     runner.initialize_builtins(&mut vm)?;
@@ -109,6 +113,12 @@ pub fn resolve_entry_point_pc(
     call: &CallEntryPoint,
     contract_class: &ContractClassV0,
 ) -> Result<usize, PreExecutionError> {
+    if call.entry_point_type == EntryPointType::Constructor
+        && call.entry_point_selector != selector_from_name(CONSTRUCTOR_ENTRY_POINT_NAME)
+    {
+        return Err(PreExecutionError::InvalidConstructorEntryPointName);
+    }
+
     let entry_points_of_same_type = &contract_class.entry_points_by_type[&call.entry_point_type];
     let filtered_entry_points: Vec<_> = entry_points_of_same_type
         .iter()
@@ -188,22 +198,19 @@ pub fn run_entry_point(
     entry_point_pc: usize,
     args: Args,
 ) -> Result<(), VirtualMachineExecutionError> {
-    // TODO(Dori,30/06/2023): propagate properly once VM allows it.
-    let run_resources = &mut None;
     let verify_secure = true;
     let program_segment_size = None; // Infer size from program.
     let args: Vec<&CairoArg> = args.iter().collect();
-    runner.run_from_entrypoint(
+    let result = runner.run_from_entrypoint(
         entry_point_pc,
         &args,
-        run_resources,
         verify_secure,
         program_segment_size,
         vm,
         hint_processor,
-    )?;
+    );
 
-    Ok(())
+    Ok(result?)
 }
 
 pub fn finalize_execution(
@@ -246,7 +253,7 @@ pub fn finalize_execution(
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             failed: false,
-            gas_consumed: StarkFelt::default(),
+            gas_consumed: 0,
         },
         vm_resources: full_call_vm_resources.filter_unused_builtins(),
         inner_calls: syscall_handler.inner_calls,

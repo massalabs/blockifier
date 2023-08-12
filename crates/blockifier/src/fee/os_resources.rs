@@ -1,12 +1,14 @@
+use lazy_static::lazy_static;
 use serde_json::json;
 
 use crate::fee::os_usage::OsResources;
 
-#[ctor::ctor]
-pub static OS_RESOURCES: OsResources = {
-    serde_json::from_value(os_resources())
-        .expect("os_resources json does not exist or cannot be deserialized.")
-};
+lazy_static! {
+    pub static ref OS_RESOURCES: OsResources = {
+        serde_json::from_value(os_resources())
+            .expect("os_resources json does not exist or cannot be deserialized.")
+    };
+}
 
 // TODO(Arni, 14/6/2023): Update `GetBlockHash` values.
 fn os_resources() -> serde_json::Value {
@@ -91,6 +93,17 @@ fn os_resources() -> serde_json::Value {
                 "n_memory_holes": 0,
                 "n_steps": 44
             },
+            // The following is the cost of one Keccak round.
+            // TODO(ilya): Consider moving the resources of a keccak round to a seperate dict.
+            "Keccak": {
+                "builtin_instance_counter": {
+                    "bitwise_builtin": 6,
+                    "keccak_builtin": 1,
+                    "range_check_builtin": 56
+                },
+                "n_memory_holes": 0,
+                "n_steps": 381
+            },
             "LibraryCall": {
                 "builtin_instance_counter": {
                     "range_check_builtin": 19
@@ -109,6 +122,41 @@ fn os_resources() -> serde_json::Value {
                 "builtin_instance_counter": {},
                 "n_memory_holes": 0,
                 "n_steps": 73
+            },
+            "Secp256k1Add": {
+                "builtin_instance_counter": {
+                    "range_check_builtin": 29
+                },
+                "n_memory_holes": 0,
+                "n_steps": 354
+            },
+            "Secp256k1GetPointFromX": {
+                "builtin_instance_counter": {
+                    "range_check_builtin": 30
+                },
+                "n_memory_holes": 0,
+                "n_steps": 360
+            },
+            "Secp256k1GetXy": {
+                "builtin_instance_counter": {
+                    "range_check_builtin": 9
+                },
+                "n_memory_holes": 0,
+                "n_steps": 124
+            },
+            "Secp256k1Mul": {
+                "builtin_instance_counter": {
+                    "range_check_builtin": 10739
+                },
+                "n_memory_holes": 0,
+                "n_steps": 121910
+            },
+            "Secp256k1New": {
+                "builtin_instance_counter": {
+                    "range_check_builtin": 36
+                },
+                "n_memory_holes": 0,
+                "n_steps": 440
             },
             "SendMessageToL1": {
                 "builtin_instance_counter": {},

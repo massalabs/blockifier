@@ -2,15 +2,15 @@ use cairo_felt::Felt252;
 use cairo_vm::types::relocatable::Relocatable;
 use cairo_vm::vm::vm_core::VirtualMachine;
 use serde::Deserialize;
-use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::{
-    calculate_contract_address, ClassHash, ContractAddress, EntryPointSelector,
+use starknet_api::api_core::{
+    calculate_contract_address, ClassHash, ContractAddress, EntryPointSelector, EthAddress,
 };
+use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, EthAddress, EventContent, EventData, EventKey, L2ToL1Payload,
+    Calldata, ContractAddressSalt, EventContent, EventData, EventKey, L2ToL1Payload,
 };
 use strum_macros::EnumIter;
 
@@ -51,9 +51,15 @@ pub enum DeprecatedSyscallSelector {
     GetSequencerAddress,
     GetTxInfo,
     GetTxSignature,
+    Keccak,
     LibraryCall,
     LibraryCallL1Handler,
     ReplaceClass,
+    Secp256k1Add,
+    Secp256k1GetPointFromX,
+    Secp256k1GetXy,
+    Secp256k1Mul,
+    Secp256k1New,
     SendMessageToL1,
     StorageRead,
     StorageWrite,
@@ -81,9 +87,15 @@ impl TryFrom<StarkFelt> for DeprecatedSyscallSelector {
             b"GetSequencerAddress" => Ok(Self::GetSequencerAddress),
             b"GetTxInfo" => Ok(Self::GetTxInfo),
             b"GetTxSignature" => Ok(Self::GetTxSignature),
+            b"Keccak" => Ok(Self::Keccak),
             b"LibraryCall" => Ok(Self::LibraryCall),
             b"LibraryCallL1Handler" => Ok(Self::LibraryCallL1Handler),
             b"ReplaceClass" => Ok(Self::ReplaceClass),
+            b"Secp256k1Add" => Ok(Self::Secp256k1Add),
+            b"Secp256k1GetPointFromX" => Ok(Self::Secp256k1GetPointFromX),
+            b"Secp256k1GetXy" => Ok(Self::Secp256k1GetXy),
+            b"Secp256k1Mul" => Ok(Self::Secp256k1Mul),
+            b"Secp256k1New" => Ok(Self::Secp256k1New),
             b"SendMessageToL1" => Ok(Self::SendMessageToL1),
             b"StorageRead" => Ok(Self::StorageRead),
             b"StorageWrite" => Ok(Self::StorageWrite),
@@ -164,7 +176,6 @@ pub fn call_contract(
     syscall_handler: &mut DeprecatedSyscallHintProcessor<'_>,
 ) -> DeprecatedSyscallResult<CallContractResponse> {
     let storage_address = request.contract_address;
-    let initial_gas = constants::INITIAL_GAS_COST.into();
     let entry_point = CallEntryPoint {
         class_hash: None,
         code_address: Some(storage_address),
@@ -174,7 +185,7 @@ pub fn call_contract(
         storage_address,
         caller_address: syscall_handler.storage_address,
         call_type: CallType::Call,
-        initial_gas,
+        initial_gas: constants::INITIAL_GAS_COST,
     };
     let retdata_segment = execute_inner_call(entry_point, vm, syscall_handler)?;
 
@@ -290,7 +301,6 @@ pub fn deploy(
         deployer_address_for_calculation,
     )?;
 
-    let initial_gas = constants::INITIAL_GAS_COST.into();
     let ctor_context = ConstructorContext {
         class_hash: request.class_hash,
         code_address: Some(deployed_contract_address),
@@ -303,7 +313,7 @@ pub fn deploy(
         syscall_handler.context,
         ctor_context,
         request.constructor_calldata,
-        initial_gas,
+        constants::INITIAL_GAS_COST,
     )?;
     syscall_handler.inner_calls.push(call_info);
 

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-use std::ops::Shl;
-use std::rc::Rc;
+use core::ops::Shl;
 
 use cairo_felt::{Felt252, PRIME_STR};
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -14,6 +12,7 @@ use cairo_vm::serde::deserialize_program::ApTracking;
 use cairo_vm::types::exec_scope::ExecutionScopes;
 use cairo_vm::vm::errors::hint_errors::HintError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use cairo_vm::vm::runners::cairo_runner::RunResources;
 use cairo_vm::vm::vm_core::VirtualMachine;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
@@ -21,6 +20,10 @@ use num_traits::{Num, One, Zero};
 use crate::execution::hint_code::{
     NORMALIZE_ADDRESS_SET_IS_250_HINT, NORMALIZE_ADDRESS_SET_IS_SMALL_HINT,
 };
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::HashMap;
+use crate::stdlib::rc::Rc;
+use crate::stdlib::string::{String, ToString};
 
 pub type HintExecutionResult = Result<(), HintError>;
 
@@ -87,5 +90,5 @@ pub fn extended_builtin_hint_processor() -> BuiltinHintProcessor {
             Rc::new(HintFunc(Box::new(normalize_address_set_is_250))),
         ),
     ]);
-    BuiltinHintProcessor::new(extra_hints)
+    BuiltinHintProcessor::new(extra_hints, RunResources::default())
 }

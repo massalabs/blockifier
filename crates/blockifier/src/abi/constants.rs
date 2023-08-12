@@ -37,6 +37,8 @@ pub const N_STEPS_PER_PEDERSEN: usize = 8;
 // Gas Cost.
 // See documentation in core/os/constants.cairo.
 pub const STEP_GAS_COST: u64 = 100;
+pub const RANGE_CHECK_GAS_COST: u64 = 70;
+
 // An estimation of the initial gas for a transaction to run with. This solution is temporary and
 // this value will become a field of the transaction.
 pub const INITIAL_GAS_COST: u64 = 10_u64.pow(8) * STEP_GAS_COST;
@@ -53,8 +55,16 @@ pub const DEPLOY_GAS_COST: u64 = 200 * STEP_GAS_COST + ENTRY_POINT_GAS_COST;
 pub const EMIT_EVENT_GAS_COST: u64 = 10 * STEP_GAS_COST;
 pub const GET_BLOCK_HASH_GAS_COST: u64 = 50 * STEP_GAS_COST;
 pub const GET_EXECUTION_INFO_GAS_COST: u64 = 10 * STEP_GAS_COST;
+pub const KECCAK_GAS_COST: u64 = 0;
+pub const KECCAK_ROUND_COST_GAS_COST: u64 = 180000;
 pub const LIBRARY_CALL_GAS_COST: u64 = CALL_CONTRACT_GAS_COST;
 pub const REPLACE_CLASS_GAS_COST: u64 = 50 * STEP_GAS_COST;
+pub const SECP256K1_ADD_GAS_COST: u64 = 254 * STEP_GAS_COST + 29 * RANGE_CHECK_GAS_COST;
+pub const SECP256K1_GET_POINT_FROM_X_GAS_COST: u64 =
+    260 * STEP_GAS_COST + 30 * RANGE_CHECK_GAS_COST;
+pub const SECP256K1_GET_XY_GAS_COST: u64 = 24 * STEP_GAS_COST + 9 * RANGE_CHECK_GAS_COST;
+pub const SECP256K1_MUL_GAS_COST: u64 = 121810 * STEP_GAS_COST + 10739 * RANGE_CHECK_GAS_COST;
+pub const SECP256K1_NEW_GAS_COST: u64 = 340 * STEP_GAS_COST + 36 * RANGE_CHECK_GAS_COST;
 pub const SEND_MESSAGE_TO_L1_GAS_COST: u64 = 50 * STEP_GAS_COST;
 pub const STORAGE_READ_GAS_COST: u64 = 50 * STEP_GAS_COST;
 pub const STORAGE_WRITE_GAS_COST: u64 = 50 * STEP_GAS_COST;
@@ -65,3 +75,6 @@ pub const STORAGE_WRITE_GAS_COST: u64 = 50 * STEP_GAS_COST;
 // TODO(Arni, 14/6/2023): Replace BLOCK_HASH_CONSTANT_ADDRESS with a lazy calculation.
 //      pub static BLOCK_HASH_CONTRACT_ADDRESS: Lazy<ContractAddress> = ...
 pub const BLOCK_HASH_CONTRACT_ADDRESS: u64 = 1;
+
+// The block number -> block hash mapping is written for the current block number minus this number.
+pub const STORED_BLOCK_HASH_BUFFER: u64 = 10;

@@ -4,17 +4,13 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use num_bigint::BigUint;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use starknet_api::core::{ChainId, ClassHash, CompiledClassHash, ContractAddress};
+use starknet_api::api_core::{ChainId, ClassHash, CompiledClassHash, ContractAddress, EthAddress};
 use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::EthAddress;
 
 use crate::errors::NativeBlockifierResult;
 
-pub const CHAIN_NAMES: &[&str; 4] =
-    &["SN_MAIN", "SN_GOERLI", "SN_GOERLI2", "PRIVATE_SN_POTC_GOERLI"];
-
 #[derive(Eq, FromPyObject, Hash, PartialEq, Clone, Copy)]
-pub struct PyFelt(#[pyo3(from_py_with = "pyint_to_stark_felt")] pub StarkFelt);
+pub struct PyFelt(#[pyo3(from_py_with = "int_to_stark_felt")] pub StarkFelt);
 
 impl IntoPy<PyObject> for PyFelt {
     fn into_py(self, py: Python<'_>) -> PyObject {
@@ -62,7 +58,7 @@ impl From<CompiledClassHash> for PyFelt {
     }
 }
 
-fn pyint_to_stark_felt(int: &PyAny) -> PyResult<StarkFelt> {
+fn int_to_stark_felt(int: &PyAny) -> PyResult<StarkFelt> {
     let biguint: BigUint = int.extract()?;
     biguint_to_felt(biguint).map_err(|e| PyValueError::new_err(e.to_string()))
 }
@@ -80,19 +76,30 @@ where
     values.into_iter().map(converter).collect()
 }
 
-pub fn to_chain_id_enum(value: BigUint) -> NativeBlockifierResult<ChainId> {
-    let expected_name = String::from_utf8_lossy(&value.to_bytes_be()).to_string();
-    for chain_name in CHAIN_NAMES {
-        if expected_name == *chain_name {
-            return Ok(ChainId(expected_name));
-        }
-    }
-    Err(TransactionExecutionError::UnknownChainId { chain_id: value.to_string() }.into())
+pub fn int_to_chain_id(int: &PyAny) -> PyResult<ChainId> {
+    let biguint: BigUint = int.extract()?;
+    Ok(ChainId(String::from_utf8_lossy(&biguint.to_bytes_be()).into()))
 }
 
 // TODO(Dori, 1/4/2023): If and when supported in the Python build environment, use #[cfg(test)].
 #[pyfunction]
 pub fn raise_error_for_testing() -> NativeBlockifierResult<()> {
-    Err(TransactionExecutionError::UnknownChainId { chain_id: String::from("Dummy message.") }
-        .into())
+    Err(TransactionExecutionError::CairoResourcesNotContainedInFeeCosts.into())
+}
+
+pub fn py_attr<T>(obj: &PyAny, attr: &str) -> NativeBlockifierResult<T>
+where
+    T: for<'a> FromPyObject<'a>,
+    T: Clone,
+{
+    Ok(obj.getattr(attr)?.extract()?)
+}
+
+pub fn py_enum_name<T>(obj: &PyAny, attr: &str) -> NativeBlockifierResult<T>
+where
+    T: for<'a> FromPyObject<'a>,
+    T: Clone,
+    T: ToString,
+{
+    py_attr(obj.getattr(attr)?, "name")
 }

@@ -1,26 +1,25 @@
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
-
 use cairo_felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
 };
 use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::get_ptr_from_var_name;
-use cairo_vm::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
+use cairo_vm::hint_processor::hint_processor_definition::{HintProcessorLogic, HintReference};
 use cairo_vm::serde::deserialize_program::ApTracking;
+use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::types::exec_scope::ExecutionScopes;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_vm::vm::errors::hint_errors::HintError;
 use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
-use starknet_api::core::{ClassHash, ContractAddress, EntryPointSelector};
+use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::Calldata;
 use starknet_api::StarknetApiError;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 use crate::abi::constants;
 use crate::execution::common_hints::{extended_builtin_hint_processor, HintExecutionResult};
@@ -43,6 +42,11 @@ use crate::execution::execution_utils::{
 use crate::execution::hint_code;
 use crate::state::errors::StateError;
 use crate::state::state_api::State;
+use crate::stdlib::any::Any;
+use crate::stdlib::boxed::Box;
+use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::string::{String, ToString};
+use crate::stdlib::vec::Vec;
 
 pub type SyscallCounter = HashMap<DeprecatedSyscallSelector, usize>;
 
@@ -321,7 +325,25 @@ impl<'a> DeprecatedSyscallHintProcessor<'a> {
     }
 }
 
-impl HintProcessor for DeprecatedSyscallHintProcessor<'_> {
+impl ResourceTracker for DeprecatedSyscallHintProcessor<'_> {
+    fn consumed(&self) -> bool {
+        self.context.vm_run_resources.consumed()
+    }
+
+    fn consume_step(&mut self) {
+        self.context.vm_run_resources.consume_step()
+    }
+
+    fn get_n_steps(&self) -> Option<usize> {
+        self.context.vm_run_resources.get_n_steps()
+    }
+
+    fn run_resources(&self) -> &RunResources {
+        self.context.vm_run_resources.run_resources()
+    }
+}
+
+impl HintProcessorLogic for DeprecatedSyscallHintProcessor<'_> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -397,7 +419,6 @@ pub fn execute_library_call(
 ) -> DeprecatedSyscallResult<ReadOnlySegment> {
     let entry_point_type =
         if call_to_external { EntryPointType::External } else { EntryPointType::L1Handler };
-    let initial_gas = constants::INITIAL_GAS_COST.into();
     let entry_point = CallEntryPoint {
         class_hash: Some(class_hash),
         code_address,
@@ -408,7 +429,7 @@ pub fn execute_library_call(
         storage_address: syscall_handler.storage_address,
         caller_address: syscall_handler.caller_address,
         call_type: CallType::Delegate,
-        initial_gas,
+        initial_gas: constants::INITIAL_GAS_COST,
     };
 
     execute_inner_call(entry_point, vm, syscall_handler)
@@ -419,11 +440,11 @@ pub fn read_felt_array<TErr>(
     ptr: &mut Relocatable,
 ) -> Result<Vec<StarkFelt>, TErr>
 where
-    TErr: From<StarknetApiError> + From<VirtualMachineError> + From<MemoryError>,
+    TErr: From<StarknetApiError> + From<VirtualMachineError> + From<MemoryError> + From<MathError>,
 {
     let array_size = stark_felt_from_ptr(vm, ptr)?;
     let array_data_start_ptr = vm.get_relocatable(*ptr)?;
-    *ptr += 1;
+    *ptr = (*ptr + 1)?;
 
     Ok(felt_range_from_ptr(vm, array_data_start_ptr, usize::try_from(array_size)?)?)
 }
