@@ -1,6 +1,4 @@
-#[cfg(feature = "parity-scale-codec")]
 extern crate alloc;
-#[cfg(feature = "parity-scale-codec")]
 pub use alloc::collections::btree_map::BTreeMap;
 
 use cairo_felt::Felt252;
