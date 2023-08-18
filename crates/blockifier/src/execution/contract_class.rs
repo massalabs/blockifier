@@ -1,3 +1,4 @@
+#[cfg(feature = "parity-scale-codec")]
 use std::collections::{BTreeMap, BTreeSet};
 
 use cairo_felt::Felt252;
@@ -433,6 +434,7 @@ fn convert_entry_points_v1(
         .collect()
 }
 
+#[cfg(feature = "parity-scale-codec")]
 fn hashmap_to_btree(
     hashmap: HashMap<EntryPointType, Vec<EntryPoint>>,
 ) -> BTreeMap<EntryPointType, BTreeSet<EntryPoint>> {
