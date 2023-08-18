@@ -1,5 +1,7 @@
 #[cfg(feature = "parity-scale-codec")]
-use std::collections::{BTreeMap, BTreeSet};
+extern crate alloc;
+#[cfg(feature = "parity-scale-codec")]
+pub use alloc::collections::btree_map::BTreeMap;
 
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
@@ -138,11 +140,8 @@ pub struct ContractClassV0Inner {
 impl Encode for ContractClassV0Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
-        let entry_points_by_type = val
-            .entry_points_by_type
-            .into_iter()
-            .collect::<Vec<(EntryPointType, Vec<EntryPoint>)>>();
-        (val.program, entry_points_by_type).encode()
+        let entry_point_btree = hashmap_to_btree_v0(val.entry_points_by_type);
+        (val.program, entry_point_btree).encode()
     }
 }
 
@@ -152,8 +151,10 @@ impl Decode for ContractClassV0Inner {
         input: &mut I,
     ) -> Result<Self, parity_scale_codec::Error> {
         let res = <(Program, Vec<(EntryPointType, Vec<EntryPoint>)>)>::decode(input)?;
+        let entry_point_btree =
+            <BTreeMap<EntryPointType, Vec<EntryPoint>>>::from_iter(res.1.into_iter());
         let entry_points_by_type =
-            <HashMap<EntryPointType, Vec<EntryPoint>>>::from_iter(res.1.into_iter());
+            <HashMap<EntryPointType, Vec<EntryPoint>>>::from_iter(entry_point_btree.into_iter());
         Ok(ContractClassV0Inner { program: res.0, entry_points_by_type })
     }
 }
@@ -266,7 +267,7 @@ pub struct ContractClassV1Inner {
 impl Encode for ContractClassV1Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
-        let entry_point_btree = hashmap_to_btree(val.entry_points_by_type);
+        let entry_point_btree = hashmap_to_btree_v1(val.entry_points_by_type);
         let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
         (val.program, entry_point_btree, hints).encode()
     }
@@ -281,8 +282,10 @@ impl Decode for ContractClassV1Inner {
             <(Program, Vec<(EntryPointType, Vec<EntryPointV1>)>, Vec<(String, Hint)>)>::decode(
                 input,
             )?;
+        let entry_point_btree =
+            <BTreeMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1.into_iter());
         let entry_points_by_type =
-            <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1.into_iter());
+            <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(entry_point_btree.into_iter());
         let hints = <HashMap<String, Hint>>::from_iter(res.2.into_iter());
         Ok(ContractClassV1Inner { program: res.0, entry_points_by_type, hints })
     }
@@ -433,9 +436,16 @@ fn convert_entry_points_v1(
 }
 
 #[cfg(feature = "parity-scale-codec")]
-fn hashmap_to_btree(
+fn hashmap_to_btree_v0(
     hashmap: HashMap<EntryPointType, Vec<EntryPoint>>,
 ) -> BTreeMap<EntryPointType, Vec<EntryPoint>> {
+    hashmap.into_iter().collect()
+}
+
+#[cfg(feature = "parity-scale-codec")]
+fn hashmap_to_btree_v1(
+    hashmap: HashMap<EntryPointType, Vec<EntryPointV1>>,
+) -> BTreeMap<EntryPointType, Vec<EntryPointV1>> {
     hashmap.into_iter().collect()
 }
 
