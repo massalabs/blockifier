@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use cairo_felt::Felt252;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
@@ -263,10 +265,9 @@ pub struct ContractClassV1Inner {
 impl Encode for ContractClassV1Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
-        let entry_points_by_type = val
-            .entry_points_by_type
-            .into_iter()
-            .collect::<Vec<(EntryPointType, Vec<EntryPointV1>)>>();
+        let entry_point_btree = hashmap_to_btree(val.entry_points_by_type);
+        let entry_points_by_type =
+            entry_point_btree.into_iter().collect::<Vec<(EntryPointType, Vec<EntryPointV1>)>>();
         let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
         (val.program, entry_points_by_type, hints).encode()
     }
@@ -430,6 +431,12 @@ fn convert_entry_points_v1(
             })
         })
         .collect()
+}
+
+fn hashmap_to_btree(
+    hashmap: HashMap<EntryPointType, Vec<EntryPoint>>,
+) -> BTreeMap<EntryPointType, BTreeSet<EntryPoint>> {
+    hashmap.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect()
 }
 
 #[cfg(test)]
