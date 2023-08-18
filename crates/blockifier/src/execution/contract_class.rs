@@ -267,10 +267,8 @@ impl Encode for ContractClassV1Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
         let entry_point_btree = hashmap_to_btree(val.entry_points_by_type);
-        let entry_points_by_type =
-            entry_point_btree.into_iter().collect::<Vec<(EntryPointType, Vec<EntryPointV1>)>>();
         let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
-        (val.program, entry_points_by_type, hints).encode()
+        (val.program, entry_point_btree, hints).encode()
     }
 }
 
@@ -437,8 +435,8 @@ fn convert_entry_points_v1(
 #[cfg(feature = "parity-scale-codec")]
 fn hashmap_to_btree(
     hashmap: HashMap<EntryPointType, Vec<EntryPoint>>,
-) -> BTreeMap<EntryPointType, BTreeSet<EntryPoint>> {
-    hashmap.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect()
+) -> BTreeMap<EntryPointType, Vec<EntryPoint>> {
+    hashmap.into_iter().collect()
 }
 
 #[cfg(test)]
