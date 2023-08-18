@@ -150,9 +150,9 @@ impl Decode for ContractClassV0Inner {
     ) -> Result<Self, parity_scale_codec::Error> {
         let res = <(Program, Vec<(EntryPointType, Vec<EntryPoint>)>)>::decode(input)?;
         let entry_point_btree =
-            <BTreeMap<EntryPointType, Vec<EntryPoint>>>::from_iter(res.1.into_iter());
+            <BTreeMap<EntryPointType, Vec<EntryPoint>>>::from_iter(res.1);
         let entry_points_by_type =
-            <HashMap<EntryPointType, Vec<EntryPoint>>>::from_iter(entry_point_btree.into_iter());
+            <HashMap<EntryPointType, Vec<EntryPoint>>>::from_iter(entry_point_btree);
         Ok(ContractClassV0Inner { program: res.0, entry_points_by_type })
     }
 }
@@ -281,10 +281,10 @@ impl Decode for ContractClassV1Inner {
                 input,
             )?;
         let entry_point_btree =
-            <BTreeMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1.into_iter());
+            <BTreeMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(res.1);
         let entry_points_by_type =
-            <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(entry_point_btree.into_iter());
-        let hints = <HashMap<String, Hint>>::from_iter(res.2.into_iter());
+            <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(entry_point_btree);
+        let hints = <HashMap<String, Hint>>::from_iter(res.2);
         Ok(ContractClassV1Inner { program: res.0, entry_points_by_type, hints })
     }
 }
