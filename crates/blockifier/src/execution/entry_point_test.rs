@@ -1,9 +1,7 @@
 use cairo_vm::serde::deserialize_program::BuiltinName;
 use num_bigint::BigInt;
-
 #[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode};
-
 use pretty_assertions::assert_eq;
 use starknet_api::api_core::{EntryPointSelector, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};

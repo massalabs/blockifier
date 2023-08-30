@@ -3,14 +3,13 @@ use cairo_vm::vm::runners::cairo_runner::{
 };
 #[cfg(not(feature = "std"))]
 use num_traits::float::FloatCore;
+#[cfg(feature = "parity-scale-codec")]
+use parity_scale_codec::{Decode, Encode};
 use starknet_api::api_core::{ClassHash, ContractAddress, EntryPointSelector, EthAddress};
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{Calldata, EventContent, Fee, L2ToL1Payload, TransactionVersion};
-
-#[cfg(feature = "parity-scale-codec")]
-use parity_scale_codec::{Decode, Encode};
 
 use crate::abi::abi_utils::selector_from_name;
 use crate::abi::constants;

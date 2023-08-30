@@ -1,6 +1,4 @@
 #![cfg(test)]
-use crate::stdlib::collections::HashMap;
-
 use starknet_api::api_core::{ClassHash, ContractAddress, PatriciaKey};
 use starknet_api::hash::{StarkFelt, StarkHash};
 use starknet_api::state::StorageKey;
@@ -13,6 +11,7 @@ use crate::abi::abi_utils::{get_storage_var_address, selector_from_name};
 use crate::block_context::BlockContext;
 use crate::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use crate::state::cached_state::CachedState;
+use crate::stdlib::collections::HashMap;
 use crate::test_utils::{
     invoke_tx, test_erc20_account_balance_key, test_erc20_faulty_account_balance_key,
     DictStateReader, NonceManager, ACCOUNT_CONTRACT_CAIRO0_PATH, ACCOUNT_CONTRACT_CAIRO1_PATH,
