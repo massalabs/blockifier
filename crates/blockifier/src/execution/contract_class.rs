@@ -15,7 +15,7 @@ use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, POSEIDON_BUILTIN_
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 #[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-#[cfg(feature = "parity-scale-codec")]
+#[cfg(feature = "scale-info")]
 use scale_info::{build::Fields, Path, Type, TypeInfo};
 use serde::de::{self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -39,7 +39,11 @@ use crate::stdlib::vec::Vec;
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
 #[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Serialize, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -76,7 +80,11 @@ impl MaxEncodedLen for ContractClass {
 
 // V0.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct ContractClassV0(pub Arc<ContractClassV0Inner>);
 impl Deref for ContractClassV0 {
     type Target = ContractClassV0Inner;
@@ -159,7 +167,7 @@ impl Decode for ContractClassV0Inner {
     }
 }
 
-#[cfg(feature = "parity-scale-codec")]
+#[cfg(feature = "scale-info")]
 impl TypeInfo for ContractClassV0Inner {
     type Identity = Self;
     // The type info is saying that the ContractClassV0Inner must be seen as an
@@ -184,7 +192,11 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 
 // V1.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
     type Target = ContractClassV1Inner;
@@ -293,7 +305,7 @@ impl Decode for ContractClassV1Inner {
     }
 }
 
-#[cfg(feature = "parity-scale-codec")]
+#[cfg(feature = "scale-info")]
 impl TypeInfo for ContractClassV1Inner {
     type Identity = Self;
     // The type info is saying that the ContractClassV0Inner must be seen as an
@@ -306,7 +318,11 @@ impl TypeInfo for ContractClassV1Inner {
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
-#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(
+    feature = "parity-scale-codec",
+    derive(parity_scale_codec::Encode, parity_scale_codec::Decode)
+)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct EntryPointV1 {
     pub selector: EntryPointSelector,
     pub offset: EntryPointOffset,

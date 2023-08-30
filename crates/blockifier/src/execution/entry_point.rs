@@ -9,6 +9,9 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{Calldata, EventContent, Fee, L2ToL1Payload, TransactionVersion};
 
+#[cfg(feature = "parity-scale-codec")]
+use parity_scale_codec::{Decode, Encode};
+
 use crate::abi::abi_utils::selector_from_name;
 use crate::abi::constants;
 use crate::block_context::BlockContext;
@@ -34,6 +37,7 @@ pub type EntryPointExecutionResult<T> = Result<T, EntryPointExecutionError>;
 
 /// Represents a the type of the call (used for debugging).
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub enum CallType {
     #[default]
     Call = 0,
@@ -41,6 +45,7 @@ pub enum CallType {
 }
 /// Represents a call to an entry point of a StarkNet contract.
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct CallEntryPoint {
     // The class hash is not given if it can be deduced from the storage address.
     pub class_hash: Option<ClassHash>,
@@ -241,6 +246,7 @@ impl CallEntryPoint {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct Retdata(pub Vec<StarkFelt>);
 
 #[macro_export]
@@ -251,23 +257,36 @@ macro_rules! retdata {
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct OrderedEvent {
+    #[cfg_attr(
+        feature = "parity-scale-codec",
+        codec(encoded_as = "crate::scale_codecs::USizeCodec")
+    )]
     pub order: usize,
     pub event: EventContent,
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct MessageToL1 {
     pub to_address: EthAddress,
     pub payload: L2ToL1Payload,
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct OrderedL2ToL1Message {
+    #[cfg_attr(
+        feature = "parity-scale-codec",
+        codec(encoded_as = "crate::scale_codecs::USizeCodec")
+    )]
     pub order: usize,
     pub message: MessageToL1,
 }
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct CallExecution {
     pub retdata: Retdata,
     pub events: Vec<OrderedEvent>,
@@ -277,6 +296,7 @@ pub struct CallExecution {
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct CallInfo {
     pub call: CallEntryPoint,
     pub execution: CallExecution,
@@ -285,6 +305,10 @@ pub struct CallInfo {
 
     // Additional information gathered during execution.
     pub storage_read_values: Vec<StarkFelt>,
+    #[cfg_attr(
+        feature = "parity-scale-codec",
+        codec(encoded_as = "crate::scale_codecs::HashSetCodec::<StorageKey>")
+    )]
     pub accessed_storage_keys: HashSet<StorageKey>,
 }
 
