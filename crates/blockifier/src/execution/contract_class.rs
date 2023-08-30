@@ -138,7 +138,10 @@ pub struct ContractClassV0Inner {
 impl Encode for ContractClassV0Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
-        let entry_point_btree = hashmap_to_btree_v0(val.entry_points_by_type);
+        let entry_point_btree = val
+            .entry_points_by_type
+            .into_iter()
+            .collect::<BTreeMap<EntryPointType, Vec<EntryPoint>>>();
         (val.program, entry_point_btree).encode()
     }
 }
@@ -264,7 +267,10 @@ pub struct ContractClassV1Inner {
 impl Encode for ContractClassV1Inner {
     fn encode(&self) -> Vec<u8> {
         let val = self.clone();
-        let entry_point_btree = hashmap_to_btree_v1(val.entry_points_by_type);
+        let entry_point_btree = val
+            .entry_points_by_type
+            .into_iter()
+            .collect::<BTreeMap<EntryPointType, Vec<EntryPoint>>>();
         let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
         (val.program, entry_point_btree, hints).encode()
     }
@@ -429,20 +435,6 @@ fn convert_entry_points_v1(
             })
         })
         .collect()
-}
-
-#[cfg(feature = "parity-scale-codec")]
-fn hashmap_to_btree_v0(
-    hashmap: HashMap<EntryPointType, Vec<EntryPoint>>,
-) -> BTreeMap<EntryPointType, Vec<EntryPoint>> {
-    hashmap.into_iter().collect()
-}
-
-#[cfg(feature = "parity-scale-codec")]
-fn hashmap_to_btree_v1(
-    hashmap: HashMap<EntryPointType, Vec<EntryPointV1>>,
-) -> BTreeMap<EntryPointType, Vec<EntryPointV1>> {
-    hashmap.into_iter().collect()
 }
 
 #[cfg(test)]
