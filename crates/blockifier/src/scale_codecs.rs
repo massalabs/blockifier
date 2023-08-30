@@ -1,4 +1,5 @@
 use core::hash::Hash;
+
 use parity_scale_codec::{Decode, Encode, EncodeAsRef};
 
 use crate::stdlib::collections::HashSet;
