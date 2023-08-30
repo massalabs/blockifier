@@ -11,6 +11,9 @@ pub mod test_utils;
 pub mod transaction;
 pub mod utils;
 
+#[cfg(feature = "parity-scale-codec")]
+pub mod scale_codecs;
+
 #[cfg(feature = "std")]
 include!("./with_std.rs");
 
