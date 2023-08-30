@@ -270,7 +270,7 @@ impl Encode for ContractClassV1Inner {
         let entry_point_btree = val
             .entry_points_by_type
             .into_iter()
-            .collect::<BTreeMap<EntryPointType, Vec<EntryPoint>>>();
+            .collect::<BTreeMap<EntryPointType, Vec<EntryPointV1>>>();
         let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
         (val.program, entry_point_btree, hints).encode()
     }
