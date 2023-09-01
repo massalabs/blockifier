@@ -19,6 +19,12 @@ pub mod without_std {
             fn cache_get(&mut self, class_hash: &K) -> Option<&V>;
             fn cache_set(&mut self, class_hash: K, contract_class: V);
             fn with_size(size: usize) -> Self;
+            fn cache_size(&self) -> usize {
+                1 // TODO implement
+            }
+            fn cache_hits(&self) -> Option<usize> {
+                Some(1) // TODO implement
+            }
         }
 
         impl<K: core::hash::Hash + Eq, V: core::clone::Clone> Cached<K, V> for SizedCache<K, V> {
