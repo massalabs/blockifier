@@ -1,6 +1,7 @@
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, ResourceTracker, RunResources,
 };
+#[allow(unused_imports)]
 #[cfg(not(feature = "std"))]
 use num_traits::float::FloatCore;
 #[cfg(feature = "parity-scale-codec")]
