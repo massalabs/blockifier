@@ -30,6 +30,7 @@ pub mod stdlib {
 mod sync {
     #[cfg(feature = "std")]
     pub use std::sync::{Arc, Mutex, MutexGuard};
+
     #[cfg(not(feature = "std"))]
     pub use crate::without_std::sync::*;
 }
