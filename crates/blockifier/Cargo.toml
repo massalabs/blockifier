@@ -71,7 +71,6 @@ scale-info = { workspace = true, optional = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["arbitrary_precision"] }
 sha3 = { workspace = true }
-spin = { workspace = true }
 starknet_api = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
@@ -89,5 +88,5 @@ pretty_assertions.workspace = true
 rstest.workspace = true
 test-case.workspace = true
 
-[package.metadata.cargo-udeps.ignore]
-spin = ["mutex", "spin_mutex"]
+[target.'cfg(not(feature = "std"))'.dependencies]
+spin = { version = "0.9.8", default-features = false, features = ["mutex", "spin_mutex"] }
