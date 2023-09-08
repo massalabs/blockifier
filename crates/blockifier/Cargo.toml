@@ -6,6 +6,8 @@ repository.workspace = true
 license-file.workspace = true
 description = "The transaction-executing component in the StarkNet sequencer."
 
+[package.metadata.cargo-udeps.ignore]
+spin = ["mutex", "spin_mutex"]
 
 [features]
 default = ["std"]
