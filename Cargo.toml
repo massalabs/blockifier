@@ -57,3 +57,6 @@ lazy_static = { version = "1.4.0", default-features = false, features = [
 ] }
 starknet-crypto = { version = "0.5.1", default-features = false }
 libm = { version = "0.2.7", default-features = false }
+
+[package.metadata.cargo-udeps.ignore]
+spin = ["mutex", "spin_mutex"]
