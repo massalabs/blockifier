@@ -34,8 +34,7 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --no-default-features
-      - run: cargo test --features "parity-scale-codec"
+      - run: cargo test --no-default-features --features "parity-scale-codec"
 
   udeps:
     runs-on: ubuntu-latest
