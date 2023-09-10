@@ -33,6 +33,7 @@ mod sync {
     #[cfg(feature = "std")]
     pub use std::sync::{Arc, Mutex, MutexGuard};
 
+    #[allow(unused_imports)]
     #[cfg(not(feature = "std"))]
     pub use spin::{Mutex, MutexGuard};
 }
