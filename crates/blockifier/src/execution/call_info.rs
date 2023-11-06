@@ -20,30 +20,26 @@ macro_rules! retdata {
     };
 }
 
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct OrderedEvent {
     pub order: usize,
     pub event: EventContent,
 }
 
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct MessageToL1 {
     pub to_address: EthAddress,
     pub payload: L2ToL1Payload,
 }
 
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct OrderedL2ToL1Message {
     pub order: usize,
     pub message: MessageToL1,
 }
 
 /// Represents the effects of executing a single entry point.
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct CallExecution {
     pub retdata: Retdata,
     pub events: Vec<OrderedEvent>,
@@ -53,7 +49,7 @@ pub struct CallExecution {
 }
 
 /// Represents the full effects of executing an entry point, including the inner calls it invoked.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct CallInfo {
     pub call: CallEntryPoint,
     pub execution: CallExecution,
