@@ -609,6 +609,62 @@ pub struct CommitmentStateDiff {
     pub class_hash_to_compiled_class_hash: IndexMap<ClassHash, CompiledClassHash, HasherBuilder>,
 }
 
+#[cfg(feature = "parity-scale-codec")]
+impl parity_scale_codec::Encode for CommitmentStateDiff {
+    fn size_hint(&self) -> usize {
+        self.address_to_class_hash.len()
+            * (core::mem::size_of::<ContractAddress>() + core::mem::size_of::<ClassHash>())
+            + self.address_to_nonce.len()
+                * (core::mem::size_of::<ContractAddress>() + core::mem::size_of::<Nonce>())
+            + self.class_hash_to_compiled_class_hash.len()
+                * (core::mem::size_of::<ClassHash>() + core::mem::size_of::<CompiledClassHash>())
+            + self
+                .storage_updates
+                .iter()
+                .map(|(_, idx_map)| {
+                    core::mem::size_of::<ContractAddress>()
+                        + idx_map.len()
+                            * (core::mem::size_of::<StorageKey>()
+                                + core::mem::size_of::<StarkFelt>())
+                })
+                .sum::<usize>()
+    }
+
+    fn encode_to<T: parity_scale_codec::Output + ?Sized>(&self, dest: &mut T) {
+        self.address_to_class_hash.iter().for_each(|v| v.encode_to(dest));
+        self.address_to_nonce.iter().for_each(|v| v.encode_to(dest));
+        self.storage_updates.iter().for_each(|(address, idx_map)| {
+            address.encode_to(dest);
+            idx_map.iter().for_each(|v| v.encode_to(dest));
+        });
+        self.class_hash_to_compiled_class_hash.iter().for_each(|v| v.encode_to(dest));
+    }
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl parity_scale_codec::Decode for CommitmentStateDiff {
+    fn decode<I: parity_scale_codec::Input>(
+        input: &mut I,
+    ) -> Result<Self, parity_scale_codec::Error> {
+        let res = <(
+            Vec<(ContractAddress, ClassHash)>,
+            Vec<(ContractAddress, Nonce)>,
+            Vec<(ContractAddress, Vec<(StorageKey, StarkFelt)>)>,
+            Vec<(ClassHash, CompiledClassHash)>,
+        )>::decode(input)?;
+
+        Ok(CommitmentStateDiff {
+            address_to_class_hash: res.0.into_iter().collect(),
+            address_to_nonce: res.1.into_iter().collect(),
+            storage_updates: res
+                .2
+                .into_iter()
+                .map(|(address, v)| (address, v.into_iter().collect()))
+                .collect(),
+            class_hash_to_compiled_class_hash: res.3.into_iter().collect(),
+        })
+    }
+}
 /// Holds the state changes.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct StateChanges {
