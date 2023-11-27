@@ -116,7 +116,7 @@ impl ContractClassV0 {
             + self.n_builtins()
             + self.bytecode_length()
             + 1; // Hinted class hash.
-        // The hashed data size is approximately the number of hashes (invoked in hash chains).
+                 // The hashed data size is approximately the number of hashes (invoked in hash chains).
         let n_steps = constants::N_STEPS_PER_PEDERSEN * hashed_data_size;
 
         VmExecutionResources {
@@ -283,7 +283,7 @@ impl Encode for ContractClassV1Inner {
             .entry_points_by_type
             .into_iter()
             .collect::<BTreeMap<EntryPointType, Vec<EntryPointV1>>>();
-        let hints = val.hints.into_iter().collect::<Vec<(String, Hint)>>();
+        let hints = val.hints.into_iter().collect::<BTreeMap<String, Hint>>();
         (val.program, entry_point_btree, hints).encode()
     }
 }
@@ -293,10 +293,11 @@ impl Decode for ContractClassV1Inner {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
     ) -> Result<Self, parity_scale_codec::Error> {
-        let (program, entry_point_btree, hints) =
-            <(Program, BTreeMap<EntryPointType, Vec<EntryPointV1>>, Vec<(String, Hint)>)>::decode(
-                input,
-            )?;
+        let (program, entry_point_btree, hints) = <(
+            Program,
+            BTreeMap<EntryPointType, Vec<EntryPointV1>>,
+            BTreeMap<String, Hint>,
+        )>::decode(input)?;
         let entry_points_by_type =
             <HashMap<EntryPointType, Vec<EntryPointV1>>>::from_iter(entry_point_btree);
         let hints = <HashMap<String, Hint>>::from_iter(hints);
