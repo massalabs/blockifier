@@ -54,7 +54,7 @@ pub struct CallExecution {
 }
 
 /// Represents the full effects of executing an entry point, including the inner calls it invoked.
-/// #[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "clone", derive(Clone))]
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct CallInfo {
     pub call: CallEntryPoint,
