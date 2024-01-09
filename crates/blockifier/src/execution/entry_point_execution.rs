@@ -39,6 +39,7 @@ pub struct VmExecutionContext<'a> {
 }
 
 #[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(test, derive(Clone))]
 pub struct CallResult {
     pub failed: bool,
     pub retdata: Retdata,

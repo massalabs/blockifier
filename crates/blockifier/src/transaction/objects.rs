@@ -140,6 +140,7 @@ pub struct CommonAccountFields {
 
 /// Contains the information gathered by the execution of a transaction.
 #[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(test, derive(Clone))]
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct TransactionExecutionInfo {
     /// Transaction validation call info; [None] for `L1Handler`.
@@ -188,6 +189,7 @@ impl TransactionExecutionInfo {
 
 /// A mapping from a transaction execution resource to its actual usage.
 #[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(test, derive(Clone))]
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct ResourcesMapping(pub HashMap<String, usize>);
 
