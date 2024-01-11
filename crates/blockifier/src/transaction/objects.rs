@@ -1,4 +1,6 @@
 use itertools::concat;
+#[cfg(feature = "parity-scale-codec")]
+use parity_scale_codec::{Decode, Encode};
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{Fee, TransactionHash, TransactionSignature, TransactionVersion};
@@ -24,12 +26,13 @@ pub struct AccountTransactionContext {
 
 impl AccountTransactionContext {
     pub fn is_v0(&self) -> bool {
-        self.version == TransactionVersion(StarkFelt::try_from(0_u8).unwrap())
+        self.version == TransactionVersion(StarkFelt::from(0_u8))
     }
 }
 
 /// Contains the information gathered by the execution of a transaction.
 #[derive(Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct TransactionExecutionInfo {
     /// Transaction validation call info; [None] for `L1Handler`.
     pub validate_call_info: Option<CallInfo>,
@@ -75,4 +78,38 @@ impl TransactionExecutionInfo {
 
 /// A mapping from a transaction execution resource to its actual usage.
 #[derive(Debug, Default, Eq, PartialEq)]
-pub struct ResourcesMapping(pub HashMap<String, usize>);
+pub struct ResourcesMapping(pub HashMap<String, u64>);
+
+#[cfg(feature = "parity-scale-codec")]
+impl Encode for ResourcesMapping {
+    fn size_hint(&self) -> usize {
+        self.0.len() * core::mem::size_of::<u64>()
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        self.0.clone().into_iter().collect::<Vec<(String, u64)>>().encode()
+    }
+}
+
+#[cfg(feature = "parity-scale-codec")]
+impl Decode for ResourcesMapping {
+    fn decode<I: parity_scale_codec::Input>(
+        input: &mut I,
+    ) -> Result<Self, parity_scale_codec::Error> {
+        Ok(ResourcesMapping(HashMap::from_iter(<Vec<(String, u64)>>::decode(input)?)))
+    }
+}
+#[cfg(feature = "scale-info")]
+impl scale_info::TypeInfo for ResourcesMapping {
+    type Identity = Self;
+    // The type info is saying that the ContractClassV0Inner must be seen as an
+    // array of bytes.
+    fn type_info() -> scale_info::Type {
+        scale_info::Type::builder()
+            .path(scale_info::Path::new("ResourcesMapping", module_path!()))
+            .composite(
+                scale_info::build::Fields::unnamed()
+                    .field(|f| f.ty::<[u8]>().type_name("ResourcesMapping")),
+            )
+    }
+}
