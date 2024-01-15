@@ -83,7 +83,7 @@ starknet_api = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 phf = { workspace = true }
-hashbrown = { workspace = true }
+hashbrown = { workspace = true, features = ["serde"] }
 lazy_static = { workspace = true }
 thiserror-no-std = { workspace = true }
 starknet-crypto = { workspace = true }
