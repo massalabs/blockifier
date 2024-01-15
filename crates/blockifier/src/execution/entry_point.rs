@@ -1,6 +1,11 @@
+#[cfg(feature = "std")]
+use std::collections::HashMap;
+
 use cairo_vm::vm::runners::cairo_runner::{
     ExecutionResources as VmExecutionResources, ResourceTracker, RunResources,
 };
+#[cfg(not(feature = "std"))]
+use hashbrown::HashMap;
 #[allow(unused_imports)]
 #[cfg(not(feature = "std"))]
 use num_traits::float::FloatCore;
@@ -37,7 +42,9 @@ pub const FAULTY_CLASS_HASH: &str =
 pub type EntryPointExecutionResult<T> = Result<T, EntryPointExecutionError>;
 
 /// Represents a the type of the call (used for debugging).
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, Hash, PartialEq, serde::Serialize, serde::Deserialize,
+)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub enum CallType {
     #[default]
@@ -45,7 +52,7 @@ pub enum CallType {
     Delegate = 1,
 }
 /// Represents a call to an entry point of a StarkNet contract.
-#[derive(Debug, Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct CallEntryPoint {
     // The class hash is not given if it can be deduced from the storage address.
@@ -251,7 +258,7 @@ impl CallEntryPoint {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 pub struct Retdata(pub Vec<StarkFelt>);
 
@@ -262,7 +269,7 @@ macro_rules! retdata {
     };
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 pub struct OrderedEvent {
@@ -274,7 +281,7 @@ pub struct OrderedEvent {
     pub event: EventContent,
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 #[cfg_attr(feature = "clone", derive(Clone))]
@@ -283,7 +290,7 @@ pub struct MessageToL1 {
     pub payload: L2ToL1Payload,
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 pub struct OrderedL2ToL1Message {
@@ -294,7 +301,7 @@ pub struct OrderedL2ToL1Message {
     pub order: usize,
     pub message: MessageToL1,
 }
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 pub struct CallExecution {
@@ -305,12 +312,21 @@ pub struct CallExecution {
     pub gas_consumed: u64,
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(remote = "VmExecutionResources")]
+pub struct ExecutionResourcesSerde {
+    pub n_steps: usize,
+    pub n_memory_holes: usize,
+    pub builtin_instance_counter: HashMap<String, usize>,
+}
+
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 pub struct CallInfo {
     pub call: CallEntryPoint,
     pub execution: CallExecution,
+    #[serde(with = "ExecutionResourcesSerde")]
     pub vm_resources: VmExecutionResources,
     pub inner_calls: Vec<CallInfo>,
 

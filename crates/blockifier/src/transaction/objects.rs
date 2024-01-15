@@ -31,7 +31,7 @@ impl AccountTransactionContext {
 }
 
 /// Contains the information gathered by the execution of a transaction.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 pub struct TransactionExecutionInfo {
@@ -92,7 +92,7 @@ impl TransactionExecutionInfo {
 }
 
 /// A mapping from a transaction execution resource to its actual usage.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ResourcesMapping(pub HashMap<String, u64>);
 
 #[cfg(feature = "parity-scale-codec")]
