@@ -3,19 +3,19 @@ use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SIGNATURE_BUILTIN_NAME,
 };
+use indexmap::IndexMap;
 use sp_arithmetic::fixed_point::FixedU128;
 use sp_arithmetic::FixedPointNumber;
 
 use crate::abi::constants;
 use crate::block_context::BlockContext;
 use crate::fee::fee_utils::calculate_l1_gas_by_vm_usage;
-use crate::stdlib::collections::HashMap;
 use crate::stdlib::string::{String, ToString};
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::ResourcesMapping;
 
 fn get_vm_resource_usage() -> ResourcesMapping {
-    ResourcesMapping(HashMap::from([
+    ResourcesMapping(IndexMap::from([
         (constants::N_STEPS_RESOURCE.to_string(), 1800),
         (HASH_BUILTIN_NAME.to_string(), 10),
         (RANGE_CHECK_BUILTIN_NAME.to_string(), 24),

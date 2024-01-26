@@ -621,16 +621,7 @@ impl parity_scale_codec::Encode for CommitmentStateDiff {
                 * (core::mem::size_of::<ContractAddress>() + core::mem::size_of::<Nonce>())
             + self.class_hash_to_compiled_class_hash.len()
                 * (core::mem::size_of::<ClassHash>() + core::mem::size_of::<CompiledClassHash>())
-            + self
-                .storage_updates
-                .iter()
-                .map(|(_, idx_map)| {
-                    core::mem::size_of::<ContractAddress>()
-                        + idx_map.len()
-                            * (core::mem::size_of::<StorageKey>()
-                                + core::mem::size_of::<StarkFelt>())
-                })
-                .sum::<usize>()
+            + self.storage_updates.len() * core::mem::size_of::<ContractAddress>()
     }
 
     fn encode_to<T: parity_scale_codec::Output + ?Sized>(&self, dest: &mut T) {

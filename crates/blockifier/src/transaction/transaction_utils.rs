@@ -1,11 +1,11 @@
 use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
+use indexmap::IndexMap;
 
 use crate::abi::constants;
 use crate::execution::entry_point::{CallInfo, ExecutionResources};
 use crate::fee::gas_usage::calculate_tx_gas_usage;
 use crate::fee::os_usage::get_additional_os_resources;
 use crate::state::cached_state::StateChangesCount;
-use crate::stdlib::collections::HashMap;
 use crate::stdlib::string::{String, ToString};
 use crate::transaction::errors::TransactionExecutionError;
 use crate::transaction::objects::{ResourcesMapping, TransactionExecutionResult};
@@ -66,7 +66,7 @@ pub fn calculate_tx_resources(
             .remove(SEGMENT_ARENA_BUILTIN_NAME)
             .unwrap_or_default();
 
-    let mut tx_resources = HashMap::from([
+    let mut tx_resources = IndexMap::from([
         (constants::GAS_USAGE.to_string(), l1_gas_usage as u64),
         (constants::N_STEPS_RESOURCE.to_string(), (n_steps + total_vm_usage.n_memory_holes) as u64),
     ]);

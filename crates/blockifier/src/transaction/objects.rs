@@ -1,12 +1,17 @@
+#[cfg(not(feature = "std"))]
+use hashbrown::hash_map::DefaultHashBuilder as HasherBuilder;
+use indexmap::IndexMap;
 use itertools::concat;
 #[cfg(feature = "parity-scale-codec")]
 use parity_scale_codec::{Decode, Encode};
 use starknet_api::api_core::{ClassHash, ContractAddress, Nonce};
 use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{Fee, TransactionHash, TransactionSignature, TransactionVersion};
+#[cfg(feature = "std")]
+use std::collections::hash_map::RandomState as HasherBuilder;
 
 use crate::execution::entry_point::CallInfo;
-use crate::stdlib::collections::{HashMap, HashSet};
+use crate::stdlib::collections::HashSet;
 use crate::stdlib::string::String;
 use crate::stdlib::vec::Vec;
 use crate::transaction::errors::TransactionExecutionError;
@@ -93,7 +98,7 @@ impl TransactionExecutionInfo {
 
 /// A mapping from a transaction execution resource to its actual usage.
 #[derive(Clone, Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct ResourcesMapping(pub HashMap<String, u64>);
+pub struct ResourcesMapping(pub IndexMap<String, u64, HasherBuilder>);
 
 #[cfg(feature = "parity-scale-codec")]
 impl Encode for ResourcesMapping {
@@ -101,8 +106,8 @@ impl Encode for ResourcesMapping {
         self.0.len() * core::mem::size_of::<u64>()
     }
 
-    fn encode(&self) -> Vec<u8> {
-        self.0.clone().into_iter().collect::<Vec<(String, u64)>>().encode()
+    fn encode_to<T: parity_scale_codec::Output + ?Sized>(&self, dest: &mut T) {
+        self.0.iter().for_each(|v| v.encode_to(dest))
     }
 }
 
@@ -111,6 +116,6 @@ impl Decode for ResourcesMapping {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
     ) -> Result<Self, parity_scale_codec::Error> {
-        Ok(ResourcesMapping(HashMap::from_iter(<Vec<(String, u64)>>::decode(input)?)))
+        Ok(ResourcesMapping(IndexMap::from_iter(<Vec<(String, u64)>>::decode(input)?)))
     }
 }
