@@ -37,9 +37,8 @@ impl AccountTransactionContext {
 }
 
 /// Contains the information gathered by the execution of a transaction.
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct TransactionExecutionInfo {
     /// Transaction validation call info; [None] for `L1Handler`.
     pub validate_call_info: Option<CallInfo>,
