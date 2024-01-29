@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-blockifier = { path = "../crates/blockifier", default-features = true, features = [
+blockifier = { path = "../crates/blockifier", default-features = false, features = [
+  "std",
   "testing",
   "parity-scale-codec",
   "scale-info",
