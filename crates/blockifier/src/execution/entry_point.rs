@@ -269,9 +269,8 @@ macro_rules! retdata {
     };
 }
 
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Eq, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct OrderedEvent {
     #[cfg_attr(
         feature = "parity-scale-codec",
@@ -281,18 +280,16 @@ pub struct OrderedEvent {
     pub event: EventContent,
 }
 
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct MessageToL1 {
     pub to_address: EthAddress,
     pub payload: L2ToL1Payload,
 }
 
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct OrderedL2ToL1Message {
     #[cfg_attr(
         feature = "parity-scale-codec",
@@ -301,9 +298,8 @@ pub struct OrderedL2ToL1Message {
     pub order: usize,
     pub message: MessageToL1,
 }
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct CallExecution {
     pub retdata: Retdata,
     pub events: Vec<OrderedEvent>,
@@ -320,9 +316,8 @@ pub struct ExecutionResourcesSerde {
     pub builtin_instance_counter: HashMap<String, usize>,
 }
 
-#[derive(Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "parity-scale-codec", derive(Encode, Decode))]
-#[cfg_attr(feature = "clone", derive(Clone))]
 pub struct CallInfo {
     pub call: CallEntryPoint,
     pub execution: CallExecution,
@@ -398,9 +393,7 @@ impl<'a> Iterator for CallInfoIter<'a> {
     type Item = &'a CallInfo;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some(call_info) = self.call_infos.pop() else {
-            return None;
-        };
+        let call_info = self.call_infos.pop()?;
 
         // Push order is right to left.
         self.call_infos.extend(call_info.inner_calls.iter().rev());
