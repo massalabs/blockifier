@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use starknet_api::transaction::Fee;
 
 use crate::abi::constants;
@@ -6,7 +7,6 @@ use crate::fee::eth_gas_constants;
 use crate::fee::fee_utils::calculate_tx_fee;
 use crate::fee::os_resources::OS_RESOURCES;
 use crate::state::cached_state::StateChangesCount;
-use crate::stdlib::collections::HashMap;
 use crate::stdlib::string::ToString;
 use crate::transaction::account_transaction::AccountTransaction;
 use crate::transaction::objects::{ResourcesMapping, TransactionExecutionResult};
@@ -172,7 +172,7 @@ pub fn estimate_minimal_fee(
             })
         }
     };
-    let resources = ResourcesMapping(HashMap::from([
+    let resources = ResourcesMapping(IndexMap::from_iter([
         (
             constants::GAS_USAGE.to_string(),
             (gas_for_type * eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD) as u64,

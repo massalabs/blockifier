@@ -38,7 +38,6 @@ std = [
   "starknet-crypto/std",
   "sp-arithmetic/std",
 ]
-clone = []
 testing = ["parity-scale-codec"]
 parity-scale-codec = [
   "dep:parity-scale-codec",
